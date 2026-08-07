@@ -1,0 +1,11 @@
+@inject ISiteContentSource ContentSource
+
+<button type="button" class="photo-card" @onclick="() => OnOpen.InvokeAsync()" aria-label="@Photo.Caption.In(Language)">
+    <img src="@ContentSource.AssetUrl(Photo.Path)" alt="" loading="lazy" />
+</button>
+
+@code {
+    [Parameter, EditorRequired] public GalleryPhoto Photo { get; set; } = default!;
+    [Parameter, EditorRequired] public string Language { get; set; } = default!;
+    [Parameter] public EventCallback OnOpen { get; set; }
+}

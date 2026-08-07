@@ -1,0 +1,160 @@
+@page "/admin/schedule"
+@inject GitHubAuthState Auth
+@inject GitHubApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Расписание концертов · Редактор</PageTitle>
+<HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
+
+<main class="admin-shell">
+    <div class="admin-header">
+        <h1>Расписание концертов</h1>
+        <a class="admin-back" href="/admin">← Ко всем разделам</a>
+    </div>
+
+    @if (_loading)
+    {
+        <p>Загрузка…</p>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <p class="admin-error">@_error</p>
+        }
+        @if (_success is not null)
+        {
+            <p class="admin-success">@_success</p>
+        }
+
+        @foreach (var concert in _concerts.OrderBy(x => x.StartsAtLocal).ToArray())
+        {
+            <div class="admin-card">
+                <div class="admin-list-item-head">
+                    <div>
+                        <strong>@concert.CityEn.Trim()</strong>
+                        <span class="admin-badge">@concert.StartsAtLocal.ToString("yyyy-MM-dd HH:mm") · @concert.Status</span>
+                    </div>
+                    <div class="admin-row-actions">
+                        <button type="button" class="button" @onclick="() => Toggle(concert)">
+                            @(_editing == concert ? "Свернуть" : "Изменить")
+                        </button>
+                        <button type="button" class="button button-quiet" @onclick="() => Remove(concert)">Удалить</button>
+                    </div>
+                </div>
+                @if (_editing == concert)
+                {
+                    <ConcertEditor Model="concert" OnClose="() => Toggle(concert)" />
+                }
+            </div>
+        }
+
+        <button type="button" class="button" @onclick="AddConcert">Добавить концерт</button>
+
+        <div class="admin-actions">
+            <button class="button button-primary" @onclick="SaveAsync" disabled="@_saving">
+                @(_saving ? "Сохраняем…" : "Сохранить всё")
+            </button>
+        </div>
+    }
+</main>
+
+@code {
+    private bool _loading = true;
+    private bool _saving;
+    private string? _error;
+    private string? _success;
+
+    private ScheduleDocument? _originalEn;
+    private ScheduleDocument? _originalRu;
+    private readonly List<ConcertEdit> _concerts = [];
+    private ConcertEdit? _editing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        if (!Auth.IsAuthenticated)
+        {
+            Nav.NavigateTo("/admin");
+            return;
+        }
+
+        try
+        {
+            _originalEn = await Api.GetFileAsync<ScheduleDocument>("content/schedule/en/schedule.json");
+            _originalRu = await Api.GetFileAsync<ScheduleDocument>("content/schedule/ru/schedule.json");
+
+            var ruById = _originalRu.Concerts.ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
+            foreach (var en in _originalEn.Concerts)
+            {
+                var ru = ruById.TryGetValue(en.Id, out var match) ? match : en;
+                _concerts.Add(ConcertEdit.FromDocuments(en, ru));
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Не удалось загрузить данные: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void Toggle(ConcertEdit concert) => _editing = _editing == concert ? null : concert;
+
+    private void AddConcert()
+    {
+        var concert = new ConcertEdit { Id = $"new-concert-{_concerts.Count + 1}" };
+        _concerts.Add(concert);
+        _editing = concert;
+    }
+
+    private void Remove(ConcertEdit concert)
+    {
+        _concerts.Remove(concert);
+        if (_editing == concert)
+        {
+            _editing = null;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_originalEn is null || _originalRu is null)
+        {
+            return;
+        }
+
+        if (_concerts.Select(x => x.Id.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != _concerts.Count)
+        {
+            _error = "У двух концертов совпадает ID — сделайте идентификаторы уникальными.";
+            return;
+        }
+
+        _error = null;
+        _success = null;
+        _saving = true;
+        try
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var updatedEn = _originalEn with { LastUpdated = today, Concerts = _concerts.Select(x => x.ToDocument(english: true)).ToArray() };
+            var updatedRu = _originalRu with { LastUpdated = today, Concerts = _concerts.Select(x => x.ToDocument(english: false)).ToArray() };
+
+            await Api.PutJsonAsync("content/schedule/en/schedule.json", updatedEn, "Update schedule (en) via admin");
+            await Api.PutJsonAsync("content/schedule/ru/schedule.json", updatedRu, "Update schedule (ru) via admin");
+
+            _originalEn = updatedEn;
+            _originalRu = updatedRu;
+            _success = "Сохранено.";
+        }
+        catch (Exception ex)
+        {
+            _error = $"Не удалось сохранить: {ex.Message}";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

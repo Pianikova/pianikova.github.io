@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="ContentUnavailable" xml:space="preserve"><value>Контент временно недоступен</value></data>
+  <data name="LoadFailed" xml:space="preserve"><value>Не удалось открыть программу.</value></data>
+  <data name="TryAgain" xml:space="preserve"><value>Повторить</value></data>
+  <data name="Loading" xml:space="preserve"><value>Настраиваем тишину перед первой нотой…</value></data>
+  <data name="Close" xml:space="preserve"><value>Закрыть</value></data>
+  <data name="Menu" xml:space="preserve"><value>Меню</value></data>
+  <data name="MainNavigation" xml:space="preserve"><value>Основная навигация</value></data>
+  <data name="Concerts" xml:space="preserve"><value>Концерты</value></data>
+  <data name="Listen" xml:space="preserve"><value>Слушать</value></data>
+  <data name="Biography" xml:space="preserve"><value>Биография</value></data>
+  <data name="Projects" xml:space="preserve"><value>Проекты</value></data>
+  <data name="Ensembles" xml:space="preserve"><value>Ансамбли</value></data>
+  <data name="ArtisticProjects" xml:space="preserve"><value>Творческие проекты</value></data>
+  <data name="LearnMore" xml:space="preserve"><value>Подробнее</value></data>
+  <data name="BiographyVersion" xml:space="preserve"><value>Версия биографии</value></data>
+  <data name="ShortBiography" xml:space="preserve"><value>Краткая</value></data>
+  <data name="FullBiography" xml:space="preserve"><value>Полная</value></data>
+  <data name="Repertoire" xml:space="preserve"><value>Репертуар</value></data>
+  <data name="Copy" xml:space="preserve"><value>Скопировать текст</value></data>
+  <data name="Copied" xml:space="preserve"><value>Скопировано</value></data>
+  <data name="Print" xml:space="preserve"><value>Печать</value></data>
+  <data name="Press" xml:space="preserve"><value>Пресса</value></data>
+  <data name="SwitchLanguage" xml:space="preserve"><value>Переключить на английский</value></data>
+  <data name="WatchPerformance" xml:space="preserve"><value>Смотреть видео</value></data>
+  <data name="UpcomingConcerts" xml:space="preserve"><value>Ближайшие концерты</value></data>
+  <data name="Opening" xml:space="preserve"><value>Первый экран</value></data>
+  <data name="NextConcert" xml:space="preserve"><value>Ближайший концерт</value></data>
+  <data name="Sound" xml:space="preserve"><value>Звучание</value></data>
+  <data name="WatchOnYouTube" xml:space="preserve"><value>Смотреть на YouTube</value></data>
+  <data name="Videos" xml:space="preserve"><value>Видео</value></data>
+  <data name="Recordings" xml:space="preserve"><value>Видео</value></data>
+  <data name="Photos" xml:space="preserve"><value>Фото</value></data>
+  <data name="PhotoGallery" xml:space="preserve"><value>Фото</value></data>
+  <data name="PreviousPhoto" xml:space="preserve"><value>Предыдущее фото</value></data>
+  <data name="NextPhoto" xml:space="preserve"><value>Следующее фото</value></data>
+  <data name="Portrait" xml:space="preserve"><value>Портрет</value></data>
+  <data name="Schedule" xml:space="preserve"><value>Афиша</value></data>
+  <data name="Archive" xml:space="preserve"><value>Архив</value></data>
+  <data name="PastConcerts" xml:space="preserve"><value>Прошедшие концерты</value></data>
+  <data name="NewDates" xml:space="preserve"><value>Новые даты готовятся. Следите за обновлениями.</value></data>
+  <data name="ProfessionalMaterials" xml:space="preserve"><value>Профессиональные материалы</value></data>
+  <data name="PressPresenters" xml:space="preserve"><value>Пресса и организаторы</value></data>
+  <data name="PressDescription" xml:space="preserve"><value>Биография, фотографии высокого разрешения и подтверждённые материалы будут собраны здесь.</value></data>
+  <data name="ComingSoon" xml:space="preserve"><value>готовится</value></data>
+  <data name="ContactManagement" xml:space="preserve"><value>Связаться с менеджером</value></data>
+  <data name="PressKit" xml:space="preserve"><value>Пресс-кит</value></data>
+  <data name="PressPhotos" xml:space="preserve"><value>Фотографии для прессы</value></data>
+  <data name="Rights" xml:space="preserve"><value>Все права защищены</value></data>
+  <data name="Tickets" xml:space="preserve"><value>Билеты</value></data>
+  <data name="SoldOut" xml:space="preserve"><value>Билеты проданы</value></data>
+  <data name="FreeAdmission" xml:space="preserve"><value>Вход свободный</value></data>
+  <data name="DetailsComingSoon" xml:space="preserve"><value>Подробности скоро</value></data>
+</root>

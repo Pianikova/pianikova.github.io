@@ -1,0 +1,68 @@
+@inject ISiteContentSource ContentSource
+@inject IStringLocalizer<Ui> L
+
+@if (CurrentIndex is not null && Photos.Count > 0)
+{
+    var index = Math.Clamp(CurrentIndex.Value, 0, Photos.Count - 1);
+    var photo = Photos[index];
+    <div class="lightbox" @ref="_root" tabindex="-1" @onkeydown="OnKeyDown" @onclick="OnClose">
+        <div class="lightbox-frame" @onclick:stopPropagation="true">
+            <button type="button" class="lightbox-close" @onclick="OnClose" aria-label="@L["Close"]">×</button>
+            @if (Photos.Count > 1)
+            {
+                <button type="button" class="lightbox-prev" @onclick="OnPrev" aria-label="@L["PreviousPhoto"]">‹</button>
+            }
+            <img src="@ContentSource.AssetUrl(photo.Path)" alt="@photo.Caption.In(Language)" />
+            @if (Photos.Count > 1)
+            {
+                <button type="button" class="lightbox-next" @onclick="OnNext" aria-label="@L["NextPhoto"]">›</button>
+            }
+            <p class="lightbox-cap">@photo.Caption.In(Language)</p>
+            @if (Photos.Count > 1)
+            {
+                <p class="lightbox-count">@(index + 1) / @Photos.Count</p>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<GalleryPhoto> Photos { get; set; } = default!;
+    [Parameter, EditorRequired] public string Language { get; set; } = default!;
+    [Parameter] public int? CurrentIndex { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnPrev { get; set; }
+    [Parameter] public EventCallback OnNext { get; set; }
+
+    private ElementReference _root;
+    private int? _focusedIndex;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (CurrentIndex is not null && CurrentIndex != _focusedIndex)
+        {
+            _focusedIndex = CurrentIndex;
+            await _root.FocusAsync();
+        }
+        else if (CurrentIndex is null)
+        {
+            _focusedIndex = null;
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Escape":
+                await OnClose.InvokeAsync();
+                break;
+            case "ArrowLeft":
+                await OnPrev.InvokeAsync();
+                break;
+            case "ArrowRight":
+                await OnNext.InvokeAsync();
+                break;
+        }
+    }
+}

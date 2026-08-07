@@ -1,0 +1,32 @@
+@{ var videoId = YouTube.ExtractVideoId(Video.YouTubeUrl); }
+
+@if (videoId is null)
+{
+    <a class="video-card video-card-fallback" href="@Video.YouTubeUrl" target="_blank" rel="noopener">
+        <span class="play-mark" aria-hidden="true">▶</span>
+        <span class="video-card-title">@Video.Title.In(Language)</span>
+    </a>
+}
+else if (_playing)
+{
+    <div class="video-card">
+        <iframe src="@YouTube.EmbedUrl(videoId)" title="@Video.Title.In(Language)"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen></iframe>
+    </div>
+}
+else
+{
+    <button type="button" class="video-card" @onclick="() => _playing = true" aria-label="@Video.Title.In(Language)">
+        <img src="@YouTube.ThumbnailUrl(videoId)" alt="" loading="lazy" />
+        <span class="play-mark" aria-hidden="true">▶</span>
+        <span class="video-card-title">@Video.Title.In(Language)</span>
+    </button>
+}
+
+@code {
+    [Parameter, EditorRequired] public PerformanceVideo Video { get; set; } = default!;
+    [Parameter, EditorRequired] public string Language { get; set; } = default!;
+
+    private bool _playing;
+}

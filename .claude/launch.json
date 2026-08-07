@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pianikova-local-web",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "build", "--", "local-web", "--no-browser"],
+      "port": 5188
+    }
+  ]
+}

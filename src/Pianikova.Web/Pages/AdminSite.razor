@@ -1,0 +1,478 @@
+@page "/admin/site"
+@inject GitHubAuthState Auth
+@inject GitHubApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Главная страница · Редактор</PageTitle>
+<HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
+
+<main class="admin-shell">
+    <div class="admin-header">
+        <h1>Главная страница</h1>
+        <a class="admin-back" href="/admin">← Ко всем разделам</a>
+    </div>
+
+    @if (_loading)
+    {
+        <p>Загрузка…</p>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <p class="admin-error">@_error</p>
+        }
+        @if (_success is not null)
+        {
+            <p class="admin-success">@_success</p>
+        }
+
+        <nav class="admin-nav" aria-label="Разделы главной страницы">
+            <a class="button" href="#identity">Основные сведения</a>
+            <a class="button" href="#hero">Первый экран</a>
+            <a class="button" href="#biography">Биография</a>
+            <a class="button" href="#repertoire">Репертуар</a>
+            <a class="button" href="#projects">Проекты</a>
+            <a class="button" href="#press">Пресса</a>
+            <a class="button" href="#contacts">Контакты</a>
+        </nav>
+
+        <div id="identity" class="admin-card admin-anchor-section">
+            <h2 class="admin-section-title">Исполнитель</h2>
+            <div class="admin-locales">
+                <div>
+                    <span class="admin-eyebrow">English</span>
+                    <div class="admin-field"><label>Имя</label><input @bind="_nameEn" /></div>
+                    <div class="admin-field"><label>Профессия</label><input @bind="_professionEn" /></div>
+                    <div class="admin-field"><label>Местоположение</label><input @bind="_locationEn" /></div>
+                </div>
+                <div>
+                    <span class="admin-eyebrow">Русский</span>
+                    <div class="admin-field"><label>Имя</label><input @bind="_nameRu" /></div>
+                    <div class="admin-field"><label>Профессия</label><input @bind="_professionRu" /></div>
+                    <div class="admin-field"><label>Местоположение</label><input @bind="_locationRu" /></div>
+                </div>
+            </div>
+
+            <div id="hero" class="admin-section admin-anchor-section">
+                <h2 class="admin-section-title">Первый экран</h2>
+                @if (_pendingImageDataUrl is not null)
+                {
+                    <img class="admin-hero-preview" src="@_pendingImageDataUrl" alt="" />
+                    <p class="admin-user">Новое фото загрузится вместе с остальными правками при нажатии «Сохранить».</p>
+                }
+                else if (!string.IsNullOrWhiteSpace(_heroImagePath))
+                {
+                    <img class="admin-hero-preview" src="@HeroImageUrl" alt="" />
+                }
+                <div class="admin-field">
+                    <label>Новое фото (заменит текущее)</label>
+                    <InputFile OnChange="OnHeroImageSelected" accept="image/*" />
+                </div>
+                <div class="admin-locales">
+                    <div>
+                        <span class="admin-eyebrow">English</span>
+                        <div class="admin-field"><label>Главная фраза</label><textarea @bind="_statementEn"></textarea></div>
+                        <div class="admin-field"><label>Описание изображения</label><input @bind="_heroAltEn" /></div>
+                        <div class="admin-field"><label>Авторство</label><input @bind="_heroCreditEn" /></div>
+                    </div>
+                    <div>
+                        <span class="admin-eyebrow">Русский</span>
+                        <div class="admin-field"><label>Главная фраза</label><textarea @bind="_statementRu"></textarea></div>
+                        <div class="admin-field"><label>Описание изображения</label><input @bind="_heroAltRu" /></div>
+                        <div class="admin-field"><label>Авторство</label><input @bind="_heroCreditRu" /></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="biography" class="admin-section admin-anchor-section">
+                <h2 class="admin-section-title">Биография</h2>
+                <div class="admin-locales">
+                    <div>
+                        <span class="admin-eyebrow">English</span>
+                        <div class="admin-field"><label>Цитата</label><textarea @bind="_quoteEn"></textarea></div>
+                        <div class="admin-field"><label>Краткая биография (Markdown)</label><textarea @bind="_summaryEn" rows="10"></textarea></div>
+                        <div class="admin-field"><label>Полная биография (Markdown)</label><textarea @bind="_fullEn" rows="18"></textarea></div>
+                    </div>
+                    <div>
+                        <span class="admin-eyebrow">Русский</span>
+                        <div class="admin-field"><label>Цитата</label><textarea @bind="_quoteRu"></textarea></div>
+                        <div class="admin-field"><label>Краткая биография (Markdown)</label><textarea @bind="_summaryRu" rows="10"></textarea></div>
+                        <div class="admin-field"><label>Полная биография (Markdown)</label><textarea @bind="_fullRu" rows="18"></textarea></div>
+                    </div>
+                </div>
+                <div class="admin-field"><label>Файл CV (ссылка)</label><input @bind="_cvPath" /></div>
+            </div>
+
+            <div id="repertoire" class="admin-section admin-anchor-section">
+                <h2 class="admin-section-title">Репертуар</h2>
+                <p class="admin-user">Большой документ в формате Markdown. Пустой перевод не отображается на сайте.</p>
+                <div class="admin-locales">
+                    <div>
+                        <span class="admin-eyebrow">English</span>
+                        <div class="admin-field"><label>Репертуар (Markdown)</label><textarea @bind="_repertoireEn" rows="24"></textarea></div>
+                    </div>
+                    <div>
+                        <span class="admin-eyebrow">Русский</span>
+                        <div class="admin-field"><label>Репертуар (Markdown)</label><textarea @bind="_repertoireRu" rows="24"></textarea></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="projects" class="admin-section admin-anchor-section">
+                <h2 class="admin-section-title">Проекты</h2>
+                @for (var i = 0; i < _projects.Count; i++)
+                {
+                    var index = i;
+                    <div class="admin-list-item">
+                        <div class="admin-list-item-head">
+                            <strong>@(_projects[index].TitleRu.Length > 0 ? _projects[index].TitleRu : "Новый проект")</strong>
+                            <button type="button" class="button button-quiet" @onclick="() => RemoveProject(index)">Удалить</button>
+                        </div>
+                        <div class="admin-field"><label>Идентификатор</label><input @bind="_projects[index].Id" /></div>
+                        <div class="admin-locales">
+                            <div>
+                                <span class="admin-eyebrow">English</span>
+                                <div class="admin-field"><label>Название</label><input @bind="_projects[index].TitleEn" /></div>
+                                <div class="admin-field"><label>Описание (Markdown)</label><textarea @bind="_projects[index].DescriptionEn" rows="8"></textarea></div>
+                                <div class="admin-field"><label>Описание изображения</label><input @bind="_projects[index].ImageAltEn" /></div>
+                                <div class="admin-field"><label>Photo source / credit</label><input @bind="_projects[index].ImageCreditEn" /></div>
+                            </div>
+                            <div>
+                                <span class="admin-eyebrow">Русский</span>
+                                <div class="admin-field"><label>Название</label><input @bind="_projects[index].TitleRu" /></div>
+                                <div class="admin-field"><label>Описание (Markdown)</label><textarea @bind="_projects[index].DescriptionRu" rows="8"></textarea></div>
+                                <div class="admin-field"><label>Описание изображения</label><input @bind="_projects[index].ImageAltRu" /></div>
+                                <div class="admin-field"><label>Источник / автор фотографии</label><input @bind="_projects[index].ImageCreditRu" /></div>
+                            </div>
+                        </div>
+                        <div class="admin-field"><label>Путь к изображению</label><input @bind="_projects[index].ImagePath" /></div>
+                    </div>
+                }
+                <button type="button" class="button" @onclick="AddProject">Добавить проект</button>
+            </div>
+
+            <div id="press" class="admin-section admin-anchor-section">
+                <h2 class="admin-section-title">Пресса</h2>
+                @for (var i = 0; i < _pressQuotes.Count; i++)
+                {
+                    var index = i;
+                    <div class="admin-list-item">
+                        <div class="admin-list-item-head">
+                            <strong>@(_pressQuotes[index].PublicationRu.Length > 0 ? _pressQuotes[index].PublicationRu : "Новая цитата")</strong>
+                            <button type="button" class="button button-quiet" @onclick="() => RemovePressQuote(index)">Удалить</button>
+                        </div>
+                        <div class="admin-locales">
+                            <div>
+                                <span class="admin-eyebrow">English</span>
+                                <div class="admin-field"><label>Цитата (Markdown)</label><textarea @bind="_pressQuotes[index].TextEn"></textarea></div>
+                                <div class="admin-field"><label>Издание</label><input @bind="_pressQuotes[index].PublicationEn" /></div>
+                                <div class="admin-field"><label>Автор</label><input @bind="_pressQuotes[index].AuthorEn" /></div>
+                            </div>
+                            <div>
+                                <span class="admin-eyebrow">Русский</span>
+                                <div class="admin-field"><label>Цитата (Markdown)</label><textarea @bind="_pressQuotes[index].TextRu"></textarea></div>
+                                <div class="admin-field"><label>Издание</label><input @bind="_pressQuotes[index].PublicationRu" /></div>
+                                <div class="admin-field"><label>Автор</label><input @bind="_pressQuotes[index].AuthorRu" /></div>
+                            </div>
+                        </div>
+                        <div class="admin-field"><label>Дата публикации</label><input type="date" @bind="_pressQuotes[index].PublishedAt" /></div>
+                        <div class="admin-field"><label>Ссылка на источник</label><input @bind="_pressQuotes[index].SourceUrl" /></div>
+                    </div>
+                }
+                <button type="button" class="button" @onclick="AddPressQuote">Добавить цитату</button>
+                <div class="admin-field"><label>Путь к пресс-киту</label><input @bind="_pressKitPath" /></div>
+                <div class="admin-field"><label>Путь к фотографиям для прессы</label><input @bind="_pressPhotosPath" /></div>
+            </div>
+
+            <div id="contacts" class="admin-section admin-anchor-section">
+                <h2 class="admin-section-title">Контакты</h2>
+                <div class="admin-field"><label>Общий email</label><input @bind="_generalEmail" /></div>
+                <div class="admin-field"><label>Менеджмент</label><input @bind="_managementEmail" /></div>
+                <div class="admin-field"><label>Пресса</label><input @bind="_pressEmail" /></div>
+
+                <h3>Социальные сети</h3>
+                @for (var i = 0; i < _socialLinks.Count; i++)
+                {
+                    var index = i;
+                    <div class="admin-list-item">
+                        <div class="admin-field"><label>Сервис</label><input @bind="_socialLinks[index].Service" /></div>
+                        <div class="admin-field"><label>Ссылка</label><input @bind="_socialLinks[index].Url" /></div>
+                        <button type="button" class="button button-quiet" @onclick="() => RemoveSocialLink(index)">Удалить</button>
+                    </div>
+                }
+                <button type="button" class="button" @onclick="AddSocialLink">Добавить соцсеть</button>
+            </div>
+
+            <div class="admin-actions">
+                <button class="button button-primary" @onclick="SaveAsync" disabled="@_saving">
+                    @(_saving ? "Сохраняем…" : "Сохранить")
+                </button>
+            </div>
+        </div>
+    }
+</main>
+
+@code {
+    private bool _loading = true;
+    private bool _saving;
+    private string? _error;
+    private string? _success;
+
+    private SiteDocument? _originalEn;
+    private SiteDocument? _originalRu;
+
+    private string _nameEn = "", _nameRu = "";
+    private string _professionEn = "", _professionRu = "";
+    private string _locationEn = "", _locationRu = "";
+    private string _statementEn = "", _statementRu = "";
+    private string _heroImagePath = "";
+    private byte[]? _pendingImageBytes;
+    private string? _pendingImageFileName;
+    private string? _pendingImageDataUrl;
+    private string _heroAltEn = "", _heroAltRu = "";
+    private string _heroCreditEn = "", _heroCreditRu = "";
+    private string _quoteEn = "", _quoteRu = "";
+    private string _summaryEn = "", _summaryRu = "";
+    private string _fullEn = "", _fullRu = "";
+    private string _repertoireEn = "", _repertoireRu = "";
+    private string _cvPath = "";
+    private string _pressKitPath = "", _pressPhotosPath = "";
+    private string _generalEmail = "", _managementEmail = "", _pressEmail = "";
+    private readonly List<ProjectEdit> _projects = [];
+    private readonly List<PressQuoteEdit> _pressQuotes = [];
+    private readonly List<SocialLinkEdit> _socialLinks = [];
+
+    private string HeroImageUrl =>
+        $"https://raw.githubusercontent.com/{GitHubRepository.FullName}/{GitHubRepository.Branch}/content/{_heroImagePath}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        if (!Auth.IsAuthenticated)
+        {
+            Nav.NavigateTo("/admin");
+            return;
+        }
+
+        try
+        {
+            _originalEn = await Api.GetFileAsync<SiteDocument>("content/site/en/site.json");
+            _originalRu = await Api.GetFileAsync<SiteDocument>("content/site/ru/site.json");
+            PopulateFields(_originalEn, _originalRu);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Не удалось загрузить данные: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void PopulateFields(SiteDocument en, SiteDocument ru)
+    {
+        _nameEn = en.Identity.Name; _nameRu = ru.Identity.Name;
+        _professionEn = en.Identity.Profession; _professionRu = ru.Identity.Profession;
+        _locationEn = en.Identity.Location; _locationRu = ru.Identity.Location;
+        _statementEn = en.Hero.Statement; _statementRu = ru.Hero.Statement;
+        _heroImagePath = en.Hero.Image.Path;
+        _heroAltEn = en.Hero.Image.Alt; _heroAltRu = ru.Hero.Image.Alt;
+        _heroCreditEn = en.Hero.Image.Credit; _heroCreditRu = ru.Hero.Image.Credit;
+        _quoteEn = en.Biography.Quote; _quoteRu = ru.Biography.Quote;
+        _summaryEn = en.Biography.Summary; _summaryRu = ru.Biography.Summary;
+        _fullEn = en.Biography.Full; _fullRu = ru.Biography.Full;
+        _repertoireEn = en.Repertoire ?? ""; _repertoireRu = ru.Repertoire ?? "";
+        _cvPath = en.Biography.CvPath;
+        _projects.Clear();
+        foreach (var projectEn in en.Projects)
+        {
+            var projectRu = ru.Projects.FirstOrDefault(x => x.Id == projectEn.Id) ?? projectEn;
+            _projects.Add(new ProjectEdit
+            {
+                Id = projectEn.Id,
+                TitleEn = projectEn.Title, TitleRu = projectRu.Title,
+                DescriptionEn = projectEn.Description, DescriptionRu = projectRu.Description,
+                ImagePath = projectEn.Image.Path,
+                ImageAltEn = projectEn.Image.Alt, ImageAltRu = projectRu.Image.Alt,
+                ImageCreditEn = projectEn.Image.Credit, ImageCreditRu = projectRu.Image.Credit
+            });
+        }
+        _pressQuotes.Clear();
+        for (var i = 0; i < en.Press.Quotes.Count; i++)
+        {
+            var quoteEn = en.Press.Quotes[i];
+            var quoteRu = i < ru.Press.Quotes.Count ? ru.Press.Quotes[i] : quoteEn;
+            _pressQuotes.Add(new PressQuoteEdit
+            {
+                TextEn = quoteEn.Text, TextRu = quoteRu.Text,
+                PublicationEn = quoteEn.Publication, PublicationRu = quoteRu.Publication,
+                AuthorEn = quoteEn.Author, AuthorRu = quoteRu.Author,
+                PublishedAt = quoteEn.PublishedAt,
+                SourceUrl = quoteEn.SourceUrl
+            });
+        }
+        _pressKitPath = en.Press.PressKitPath;
+        _pressPhotosPath = en.Press.PhotosPath;
+        _generalEmail = en.Contacts.GeneralEmail;
+        _managementEmail = en.Contacts.ManagementEmail;
+        _pressEmail = en.Contacts.PressEmail;
+        _socialLinks.Clear();
+        _socialLinks.AddRange(en.Contacts.SocialLinks.Select(x => new SocialLinkEdit { Service = x.Service, Url = x.Url }));
+    }
+
+    private void AddSocialLink() => _socialLinks.Add(new SocialLinkEdit());
+    private void RemoveSocialLink(int index) => _socialLinks.RemoveAt(index);
+    private void AddProject() => _projects.Add(new ProjectEdit());
+    private void RemoveProject(int index) => _projects.RemoveAt(index);
+    private void AddPressQuote() => _pressQuotes.Add(new PressQuoteEdit());
+    private void RemovePressQuote(int index) => _pressQuotes.RemoveAt(index);
+
+    private async Task OnHeroImageSelected(InputFileChangeEventArgs e)
+    {
+        _error = null;
+        _success = null;
+        try
+        {
+            const long maxSize = 8 * 1024 * 1024;
+            await using var stream = e.File.OpenReadStream(maxSize);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+            _pendingImageBytes = buffer.ToArray();
+            _pendingImageFileName = SanitizeFileName(e.File.Name);
+            _pendingImageDataUrl = $"data:{e.File.ContentType};base64,{Convert.ToBase64String(_pendingImageBytes)}";
+        }
+        catch (Exception ex)
+        {
+            _error = $"Не удалось прочитать фото: {ex.Message}";
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_originalEn is null || _originalRu is null)
+        {
+            return;
+        }
+
+        _error = null;
+        _success = null;
+        _saving = true;
+        try
+        {
+            if (_pendingImageBytes is not null && _pendingImageFileName is not null)
+            {
+                await Api.PutMediaAsync($"content/media/images/{_pendingImageFileName}", _pendingImageBytes, $"Upload hero image {_pendingImageFileName} via admin");
+                _heroImagePath = $"media/images/{_pendingImageFileName}";
+            }
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var socialLinks = _socialLinks
+                .Select(x => new ExternalLink(x.Service.Trim(), x.Url.Trim()))
+                .Where(x => x.Service.Length > 0 && x.Url.Length > 0)
+                .ToArray();
+            var projectsEn = _projects.Where(x => !string.IsNullOrWhiteSpace(x.Id)).Select(x => x.ToDocument("en")).ToArray();
+            var projectsRu = _projects.Where(x => !string.IsNullOrWhiteSpace(x.Id)).Select(x => x.ToDocument("ru")).ToArray();
+            var pressQuotesEn = _pressQuotes.Where(x => !string.IsNullOrWhiteSpace(x.TextEn)).Select(x => x.ToDocument("en")).ToArray();
+            var pressQuotesRu = _pressQuotes.Where(x => !string.IsNullOrWhiteSpace(x.TextRu)).Select(x => x.ToDocument("ru")).ToArray();
+
+            var updatedEn = _originalEn with
+            {
+                LastUpdated = today,
+                Identity = new ArtistIdentityDocument(_nameEn, _professionEn, _locationEn),
+                Hero = new HeroDocument(_statementEn, new MediaAssetDocument(_heroImagePath, _heroAltEn, _heroCreditEn, "web")),
+                Biography = new BiographyDocument(_quoteEn, _summaryEn, _fullEn, _cvPath, today),
+                Repertoire = _repertoireEn,
+                Projects = projectsEn,
+                Press = new PressDocument(pressQuotesEn, _pressKitPath, _pressPhotosPath),
+                Contacts = new ContactDocument(_generalEmail, _managementEmail, _pressEmail, socialLinks),
+            };
+            var updatedRu = _originalRu with
+            {
+                LastUpdated = today,
+                Identity = new ArtistIdentityDocument(_nameRu, _professionRu, _locationRu),
+                Hero = new HeroDocument(_statementRu, new MediaAssetDocument(_heroImagePath, _heroAltRu, _heroCreditRu, "web")),
+                Biography = new BiographyDocument(_quoteRu, _summaryRu, _fullRu, _cvPath, today),
+                Repertoire = _repertoireRu,
+                Projects = projectsRu,
+                Press = new PressDocument(pressQuotesRu, _pressKitPath, _pressPhotosPath),
+                Contacts = new ContactDocument(_generalEmail, _managementEmail, _pressEmail, socialLinks),
+            };
+
+            await Api.PutJsonAsync("content/site/en/site.json", updatedEn, "Update site content (en) via admin");
+            await Api.PutJsonAsync("content/site/ru/site.json", updatedRu, "Update site content (ru) via admin");
+
+            _originalEn = updatedEn;
+            _originalRu = updatedRu;
+            _pendingImageBytes = null;
+            _pendingImageFileName = null;
+            _pendingImageDataUrl = null;
+            _success = "Сохранено.";
+        }
+        catch (Exception ex)
+        {
+            _error = $"Не удалось сохранить: {ex.Message}";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var cleaned = new string(name.Select(c => invalid.Contains(c) || c == ' ' ? '-' : c).ToArray());
+        return cleaned.ToLowerInvariant();
+    }
+
+    private sealed class SocialLinkEdit
+    {
+        public string Service { get; set; } = "";
+        public string Url { get; set; } = "";
+    }
+
+    private sealed class ProjectEdit
+    {
+        public string Id { get; set; } = "";
+        public string TitleEn { get; set; } = "";
+        public string TitleRu { get; set; } = "";
+        public string DescriptionEn { get; set; } = "";
+        public string DescriptionRu { get; set; } = "";
+        public string ImagePath { get; set; } = "";
+        public string ImageAltEn { get; set; } = "";
+        public string ImageAltRu { get; set; } = "";
+        public string ImageCreditEn { get; set; } = "";
+        public string ImageCreditRu { get; set; } = "";
+
+        public ArtisticProjectDocument ToDocument(string language) => new(
+            Id.Trim(),
+            language == "ru" ? TitleRu : TitleEn,
+            language == "ru" ? DescriptionRu : DescriptionEn,
+            new MediaAssetDocument(
+                ImagePath.Trim(),
+                language == "ru" ? ImageAltRu : ImageAltEn,
+                language == "ru" ? ImageCreditRu : ImageCreditEn,
+                "web"));
+    }
+
+    private sealed class PressQuoteEdit
+    {
+        public string TextEn { get; set; } = "";
+        public string TextRu { get; set; } = "";
+        public string PublicationEn { get; set; } = "";
+        public string PublicationRu { get; set; } = "";
+        public string AuthorEn { get; set; } = "";
+        public string AuthorRu { get; set; } = "";
+        public DateOnly PublishedAt { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+        public string SourceUrl { get; set; } = "";
+
+        public PressQuoteDocument ToDocument(string language) => new(
+            language == "ru" ? TextRu : TextEn,
+            language == "ru" ? PublicationRu : PublicationEn,
+            language == "ru" ? AuthorRu : AuthorEn,
+            PublishedAt,
+            SourceUrl.Trim());
+    }
+}

@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+  <PropertyGroup>
+    <PureDiVersion>2.5.2</PureDiVersion>
+    <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.10" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Localization" Version="10.0.10" />
+    <PackageReference Include="Markdig" Version="0.41.3" />
+    <PackageReference Include="Pure.DI" Version="$(PureDiVersion)" PrivateAssets="all" />
+    <PackageReference Include="Pure.DI.MS" Version="$(PureDiVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Remove="wwwroot\content\**\*" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(PianikovaProduction)' != 'true'">
+    <LocalContent Include="..\..\content\**\*" />
+  </ItemGroup>
+  <Target Name="SyncLocalContent"
+          BeforeTargets="ResolveProjectStaticWebAssets"
+          Condition="'$(PianikovaProduction)' != 'true'">
+    <RemoveDir Directories="wwwroot\content" />
+    <ItemGroup>
+      <LocalContentDestination Include="@(LocalContent->'wwwroot\content\%(RecursiveDir)%(Filename)%(Extension)')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LocalContent)"
+          DestinationFiles="@(LocalContentDestination)"
+          SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <Content Include="@(LocalContentDestination)" />
+    </ItemGroup>
+  </Target>
+</Project>

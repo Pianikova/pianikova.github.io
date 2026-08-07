@@ -1,0 +1,59 @@
+<div class="admin-card">
+    <div class="admin-field"><label>ID (стабильный идентификатор, например lake-alpsee-2024)</label><input @bind="Model.Id" /></div>
+
+    @if (Model.PendingDataUrl is not null)
+    {
+        <img class="admin-hero-preview" src="@Model.PendingDataUrl" alt="" />
+        <p class="admin-user">Новое фото загрузится вместе с остальными правками при нажатии «Сохранить всё».</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.Path))
+    {
+        <img class="admin-hero-preview" src="@ImageUrl" alt="" />
+    }
+    <div class="admin-field">
+        <label>@(string.IsNullOrWhiteSpace(Model.Path) ? "Файл" : "Заменить файл")</label>
+        <InputFile OnChange="OnFileSelected" accept="image/*" />
+    </div>
+
+    <div class="admin-field"><label>Дата съёмки</label><input type="date" @bind="Model.TakenAt" /></div>
+
+    <div class="admin-locales">
+        <div>
+            <span class="admin-eyebrow">English</span>
+            <div class="admin-field"><label>Подпись (видна только в полноэкранном просмотре)</label><textarea @bind="Model.CaptionEn"></textarea></div>
+        </div>
+        <div>
+            <span class="admin-eyebrow">Русский</span>
+            <div class="admin-field"><label>Подпись (видна только в полноэкранном просмотре)</label><textarea @bind="Model.CaptionRu"></textarea></div>
+        </div>
+    </div>
+
+    <div class="admin-actions">
+        <button type="button" class="button button-quiet" @onclick="() => OnClose.InvokeAsync()">Свернуть</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PhotoEdit Model { get; set; } = default!;
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string ImageUrl => $"https://raw.githubusercontent.com/{GitHubRepository.FullName}/{GitHubRepository.Branch}/content/{Model.Path}";
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        const long maxSize = 12 * 1024 * 1024;
+        await using var stream = e.File.OpenReadStream(maxSize);
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer);
+        Model.PendingBytes = buffer.ToArray();
+        Model.PendingFileName = SanitizeFileName(e.File.Name);
+        Model.PendingDataUrl = $"data:{e.File.ContentType};base64,{Convert.ToBase64String(Model.PendingBytes)}";
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var cleaned = new string(name.Select(c => invalid.Contains(c) || c == ' ' ? '-' : c).ToArray());
+        return cleaned.ToLowerInvariant();
+    }
+}

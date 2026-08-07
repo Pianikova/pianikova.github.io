@@ -64,3 +64,5 @@ nunit-*.xml
 /reports/DependencyInjection/raw/
 /.vs
 *.user
+/src/Pianikova.Web/wwwroot/content/
+/tmp/

@@ -1,0 +1,46 @@
+<div class="admin-card">
+    <div class="admin-field"><label>ID (стабильный идентификатор, например bach-chaconne-2025)</label><input @bind="Model.Id" /></div>
+    <div class="admin-checkbox admin-field">
+        <input type="checkbox" id="@("featured-" + Model.GetHashCode())" checked="@Model.Featured" @onchange="OnFeaturedChanged" />
+        <label for="@("featured-" + Model.GetHashCode())">Показывать на главной (можно отметить только одно видео)</label>
+    </div>
+    <div class="admin-field"><label>Ссылка на YouTube</label><input @bind="Model.YouTubeUrl" /></div>
+    <div class="admin-field"><label>Композитор</label><input @bind="Model.Composer" /></div>
+    <div class="admin-field"><label>Дата записи</label><input type="date" @bind="Model.RecordedAt" /></div>
+
+    <div class="admin-locales">
+        <div>
+            <span class="admin-eyebrow">English</span>
+            <div class="admin-field"><label>Название</label><input @bind="Model.TitleEn" /></div>
+            <div class="admin-field"><label>Описание (Markdown)</label><textarea @bind="Model.CaptionEn" rows="8"></textarea></div>
+        </div>
+        <div>
+            <span class="admin-eyebrow">Русский</span>
+            <div class="admin-field"><label>Название</label><input @bind="Model.TitleRu" /></div>
+            <div class="admin-field"><label>Описание (Markdown)</label><textarea @bind="Model.CaptionRu" rows="8"></textarea></div>
+        </div>
+    </div>
+
+    <div class="admin-actions">
+        <button type="button" class="button button-quiet" @onclick="() => OnClose.InvokeAsync()">Свернуть</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public VideoEdit Model { get; set; } = default!;
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSetFeatured { get; set; }
+
+    private async Task OnFeaturedChanged(ChangeEventArgs e)
+    {
+        var isChecked = e.Value is true;
+        if (isChecked)
+        {
+            await OnSetFeatured.InvokeAsync();
+        }
+        else
+        {
+            Model.Featured = false;
+        }
+    }
+}

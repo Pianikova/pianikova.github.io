@@ -1,0 +1,21 @@
+@inject IStringLocalizer<Ui> L
+
+@if (!string.IsNullOrWhiteSpace(Concert.TicketUrl) && Concert.Status == "on_sale")
+{
+    <a class="ticket-link" href="@Concert.TicketUrl" target="_blank" rel="noopener">@L["Tickets"] <span aria-hidden="true">↗</span></a>
+}
+else
+{
+    <span class="ticket-status">@StatusText</span>
+}
+
+@code {
+    [Parameter, EditorRequired] public Concert Concert { get; set; } = default!;
+
+    private string StatusText => Concert.Status switch
+    {
+        "sold_out" => L["SoldOut"],
+        "free" => L["FreeAdmission"],
+        _ => L["DetailsComingSoon"]
+    };
+}

@@ -1,0 +1,87 @@
+{
+  "id": "site",
+  "lastUpdated": "2026-08-11",
+  "identity": {
+    "name": "Julia Pianikova",
+    "profession": "Violin",
+    "location": "Moscow, Russia"
+  },
+  "hero": {
+    "statement": "",
+    "image": {
+      "path": "media/images/julia-pianikova-hero-2026-v2.png",
+      "alt": "Julia Pianikova with her violin",
+      "credit": "",
+      "usage": "web"
+    }
+  },
+  "biography": {
+    "quote": "",
+    "summary": "Julia Pianikova is a Russian violinist and a prizewinner of national and international competitions. She graduated with honours from the Central Music School of the Moscow State Tchaikovsky Conservatory and is currently a student at the Moscow Conservatory in the class of Professor Sergei Kravchenko, Honoured Artist of Russia.\n\nShe won First Prize at the 6th Kogan-Fest International Competition (Yaroslavl, 2025) and First Degree at the Igor Stravinsky International Competition (Moscow, 2023), and was a finalist at the Leonid Kogan International Competition (Brussels, 2021). As a member of a piano trio, she won the 26th Maria Yudina International Competition (Saint Petersburg, 2026), First Prize at the 3rd International Performing Arts Competition (Petrozavodsk, 2025), and became a laureate of the 8th Sergei Taneyev International Chamber Ensemble Competition (Moscow, 2025).\n\nJulia has appeared at leading venues in Russia and abroad and has been invited to festivals and concerts as a soloist. She has performed with leading Russian symphony orchestras under conductors Mikhail Golikov, Filippo Dessi, Artem Markin, Vasily Valitov, Sergei Durygin and Dmitry Ralko.\n\nShe has repeatedly taken part in projects of the St Petersburg Music House, the Sirius Educational Centre and the All-Russian Youth Symphony Orchestra conducted by Yuri Bashmet. In 2023, Vadim Repin selected her for his master course at the Trans-Siberian Art Festival. She has been a scholarship recipient of the Soundout Foundation for Cultural and Educational Projects and Chamber Music since 2024.\n\nAlongside her solo career, Julia is a co-founder of the Tellur Trio and a member of the early music ensemble Collegium musicum, which participates in the long-term project presenting all of J.S. Bach's cantatas at the Lutheran Cathedral of Saints Peter and Paul in Moscow.",
+    "full": "",
+    "cvPath": "",
+    "updatedAt": "2026-08-11"
+  },
+  "repertoire": "## Solo repertoire\n\n### Baroque\n\n- Marco Uccellini — *La Luciminia contenta* ([video](https://www.youtube.com/watch?v=fBVnxOCvg0M))\n\n### Classical\n\n- W.A. Mozart — Adagio for Violin and Orchestra in E major, K. 261 ([video](https://www.youtube.com/watch?v=qC_SXBeZbIQ))\n- W.A. Mozart — Violin Concerto No. 4 in D major, K. 218 ([video](https://www.youtube.com/watch?v=zkKia-WP1js))\n- Ludwig van Beethoven — Violin Sonata No. 8 in G major, Op. 30 No. 3 ([video](https://www.youtube.com/watch?v=-HUkfXoXx10))\n\n### Romantic\n\n- Clara Schumann — Three Romances for Violin and Piano, Op. 22 ([video](https://www.youtube.com/watch?v=C-LRK1vFaQs))\n- Johannes Brahms — Scherzo in C minor from the F–A–E Sonata ([video](https://www.youtube.com/watch?v=KATmZrGru1I))\n- Jules Massenet — *Méditation* from *Thaïs* ([video](https://www.youtube.com/watch?v=R5mb0vDdZ9o))\n- Pyotr Tchaikovsky — *Mélodie*, Op. 42 No. 3 ([video](https://www.youtube.com/watch?v=V6nS7h7CCPg))\n\n### Twentieth century\n\n- Sergei Prokofiev — Violin Concerto No. 1 in D major, Op. 19 ([video](https://www.youtube.com/watch?v=Ba8YvI7aSGM))\n- Sergei Prokofiev — *Death of Juliet* from *Romeo and Juliet*, arrangement for violin and piano ([video](https://www.youtube.com/watch?v=OMUcqbF5OMQ))\n- Rodion Shchedrin — *In Imitation of Albéniz* ([video](https://www.youtube.com/watch?v=FCIaSQkhVXo))\n\n## Chamber repertoire\n\n- Felix Mendelssohn — Piano Trio No. 1 in D minor, Op. 49 ([video](https://www.youtube.com/watch?v=F4gqakZghNk))\n- Camille Saint-Saëns — Piano Trio No. 2 in E minor, Op. 92 ([video](https://www.youtube.com/watch?v=ymjnWouX5KM))\n\n*Selected repertoire documented by published performance recordings. The list is updated as new material becomes available.*",
+  "projects": [
+    {
+      "id": "tellur-trio",
+      "title": "Tellur Trio",
+      "description": "The ensemble's repertoire spans music from different eras, from the Viennese Classical school to the twentieth century. The trio gives particular prominence to contemporary classical music in its programmes.\n\nThe Tellur Trio presents concert programmes and music lectures at leading venues in Moscow and other Russian cities.\n\nLaureate of the 2025 Sergei Taneyev International Chamber Ensemble Competition and Winner of the 2026 Maria Yudina International Competition\n\nEkaterina Belykh, piano\nJulia Pianikova, violin\nArtemiy Rezvykh, cello\n\n[Tellur Trio on Telegram](https://t.me/tellur_trio)  \n[Tellur Trio on VK](https://m.vk.com/tellur_trio)",
+      "image": {
+        "path": "media/images/tellur-trio-2026.jpg",
+        "alt": "Members of the Tellur Trio",
+        "credit": "",
+        "usage": "web"
+      }
+    },
+    {
+      "id": "historical-performance",
+      "title": "Historically informed performance",
+      "description": "Julia's artistic interests include historically informed performance (HIP) of Baroque, Classical and early Romantic music. She performs on period instruments — Baroque violin and viola d'amore — in solo programmes and ensembles.",
+      "image": {
+        "path": "media/images/historical-performance-viola-damore.png",
+        "alt": "Viola d'amore",
+        "credit": "",
+        "usage": "web"
+      }
+    },
+    {
+      "id": "duet-sofia-moskaleva",
+      "title": "Harp and Violin Duo",
+      "description": "Chamber concert evenings with Sofia Moskaleva, an internationally acclaimed harpist and competition laureate",
+      "image": {
+        "path": "media/images/duet-sofia-moskaleva-horizontal.png",
+        "alt": "Sofia Moskaleva with harp and Julia Pianikova with violin",
+        "credit": "",
+        "usage": "web"
+      }
+    },
+    {
+      "id": "katavasis-blog",
+      "title": "KATAVASIS — a blog about music",
+      "description": "Everyday life of a classical musician:\nDid you make little “secret” caches as a child? Did you hide treasured trinkets and curious finds under coloured glass in the yard? Concert announcements, fascinating stories about music, and more.\n\n[Read the blog on Telegram](https://t.me/gattavasis)",
+      "image": {
+        "path": "media/images/katavasis-blog.png",
+        "alt": "Julia Pianikova with her violin before a performance",
+        "credit": "",
+        "usage": "web"
+      }
+    }
+  ],
+  "press": {
+    "quotes": [],
+    "pressKitPath": "",
+    "photosPath": ""
+  },
+  "contacts": {
+    "generalEmail": "",
+    "managementEmail": "okadv@mail.ru",
+    "pressEmail": "",
+    "socialLinks": [
+      { "service": "Telegram", "url": "https://t.me/gattavasis" },
+      { "service": "Instagram", "url": "https://www.instagram.com/julia_pianikova" },
+      { "service": "YouTube", "url": "https://youtube.com/@juliapianikova" }
+    ]
+  }
+}

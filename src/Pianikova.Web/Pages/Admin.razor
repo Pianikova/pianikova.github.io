@@ -1,0 +1,81 @@
+@page "/admin"
+@inject GitHubAuthState Auth
+@inject GitHubApiClient Api
+
+<PageTitle>Редактор сайта · Julia Pianikova</PageTitle>
+<HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
+
+<main class="admin-shell">
+    <div class="admin-header">
+        <h1>Редактор сайта</h1>
+        <a class="admin-back" href="/">На сайт</a>
+    </div>
+
+    @if (!_initialized)
+    {
+        <p>Загрузка…</p>
+    }
+    else if (!Auth.IsAuthenticated)
+    {
+        <div class="admin-card">
+            <p>Войдите через GitHub-аккаунт с правом записи в репозиторий сайта.</p>
+            @if (_error is not null)
+            {
+                <p class="admin-error">@_error</p>
+            }
+            <button class="button button-primary" @onclick="LoginAsync" disabled="@_loggingIn">
+                @(_loggingIn ? "Входим…" : "Войти через GitHub")
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="admin-card">
+            <p class="admin-user">Вы вошли как <strong>@Auth.Username</strong></p>
+            <nav class="admin-nav">
+                <a class="button button-primary" href="/admin/site#identity">Основные сведения</a>
+                <a class="button button-primary" href="/admin/site#hero">Первый экран</a>
+                <a class="button button-primary" href="/admin/site#biography">Биография</a>
+                <a class="button button-primary" href="/admin/site#repertoire">Репертуар</a>
+                <a class="button button-primary" href="/admin/site#projects">Проекты</a>
+                <a class="button button-primary" href="/admin/site#press">Пресса и контакты</a>
+                <a class="button button-primary" href="/admin/schedule">Расписание концертов</a>
+                <a class="button button-primary" href="/admin/videos">Видео</a>
+                <a class="button button-primary" href="/admin/photos">Фото</a>
+            </nav>
+            <button class="button button-quiet" @onclick="LogoutAsync">Выйти</button>
+        </div>
+    }
+</main>
+
+@code {
+    private bool _initialized;
+    private bool _loggingIn;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        _initialized = true;
+    }
+
+    private async Task LoginAsync()
+    {
+        _error = null;
+        _loggingIn = true;
+        try
+        {
+            await Auth.LoginAsync(Api);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Не удалось войти: {ex.Message}";
+        }
+        finally
+        {
+            _loggingIn = false;
+        }
+    }
+
+    private async Task LogoutAsync() => await Auth.LogoutAsync();
+}

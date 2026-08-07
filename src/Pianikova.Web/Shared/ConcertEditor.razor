@@ -1,0 +1,104 @@
+<div class="admin-card">
+    <div class="admin-field"><label>ID (стабильный идентификатор, например 2026-09-24-moscow)</label><input @bind="Model.Id" /></div>
+
+    <div class="admin-field"><label>Начало (местное время площадки)</label><input type="datetime-local" @bind="Model.StartsAtLocal" /></div>
+    <div class="admin-field"><label>Часовой пояс (IANA, например Europe/Moscow)</label><input @bind="Model.Timezone" /></div>
+    <div class="admin-field">
+        <label>Формат</label>
+        <select @bind="Model.Format">
+            <option value="solo">solo</option>
+            <option value="chamber">chamber</option>
+            <option value="orchestra">orchestra</option>
+            <option value="recital">recital</option>
+            <option value="festival">festival</option>
+        </select>
+    </div>
+    <div class="admin-field"><label>Билеты (ссылка)</label><input @bind="Model.TicketUrl" /></div>
+    <div class="admin-field">
+        <label>Статус</label>
+        <select @bind="Model.Status">
+            <option value="announced">announced</option>
+            <option value="on_sale">on_sale</option>
+            <option value="sold_out">sold_out</option>
+            <option value="free">free</option>
+        </select>
+    </div>
+    <div class="admin-field"><label>Источник</label><input @bind="Model.SourceUrl" /></div>
+    <div class="admin-field"><label>Проверено</label><input type="date" @bind="Model.VerifiedAt" /></div>
+
+    <div class="admin-locales">
+        <div>
+            <span class="admin-eyebrow">English</span>
+            <div class="admin-field"><label>Город</label><input @bind="Model.CityEn" /></div>
+            <div class="admin-field"><label>Страна</label><input @bind="Model.CountryEn" /></div>
+            <div class="admin-field"><label>Площадка</label><input @bind="Model.VenueEn" /></div>
+            <div class="admin-field"><label>Серия/программа</label><input @bind="Model.SeriesEn" /></div>
+        </div>
+        <div>
+            <span class="admin-eyebrow">Русский</span>
+            <div class="admin-field"><label>Город</label><input @bind="Model.CityRu" /></div>
+            <div class="admin-field"><label>Страна</label><input @bind="Model.CountryRu" /></div>
+            <div class="admin-field"><label>Площадка</label><input @bind="Model.VenueRu" /></div>
+            <div class="admin-field"><label>Серия/программа</label><input @bind="Model.SeriesRu" /></div>
+        </div>
+    </div>
+
+    <div class="admin-section">
+        <h3>Программа</h3>
+        @for (var i = 0; i < Model.Program.Count; i++)
+        {
+            var work = Model.Program[i];
+            var index = i;
+            <div class="admin-list-item">
+                <div class="admin-locales">
+                    <div>
+                        <span class="admin-eyebrow">English</span>
+                        <div class="admin-field"><label>Композитор</label><input @bind="work.ComposerEn" /></div>
+                        <div class="admin-field"><label>Произведение</label><input @bind="work.WorkEn" /></div>
+                    </div>
+                    <div>
+                        <span class="admin-eyebrow">Русский</span>
+                        <div class="admin-field"><label>Композитор</label><input @bind="work.ComposerRu" /></div>
+                        <div class="admin-field"><label>Произведение</label><input @bind="work.WorkRu" /></div>
+                    </div>
+                </div>
+                <button type="button" class="button button-quiet" @onclick="() => Model.Program.RemoveAt(index)">Удалить</button>
+            </div>
+        }
+        <button type="button" class="button" @onclick="() => Model.Program.Add(new ProgramWorkEdit())">Добавить произведение</button>
+    </div>
+
+    <div class="admin-section">
+        <h3>Участники</h3>
+        @for (var i = 0; i < Model.Artists.Count; i++)
+        {
+            var artist = Model.Artists[i];
+            var index = i;
+            <div class="admin-list-item">
+                <div class="admin-locales">
+                    <div>
+                        <span class="admin-eyebrow">English</span>
+                        <div class="admin-field"><label>Роль</label><input @bind="artist.RoleEn" /></div>
+                        <div class="admin-field"><label>Имя/название</label><input @bind="artist.NameEn" /></div>
+                    </div>
+                    <div>
+                        <span class="admin-eyebrow">Русский</span>
+                        <div class="admin-field"><label>Роль</label><input @bind="artist.RoleRu" /></div>
+                        <div class="admin-field"><label>Имя/название</label><input @bind="artist.NameRu" /></div>
+                    </div>
+                </div>
+                <button type="button" class="button button-quiet" @onclick="() => Model.Artists.RemoveAt(index)">Удалить</button>
+            </div>
+        }
+        <button type="button" class="button" @onclick="() => Model.Artists.Add(new ConcertArtistEdit())">Добавить участника</button>
+    </div>
+
+    <div class="admin-actions">
+        <button type="button" class="button button-quiet" @onclick="() => OnClose.InvokeAsync()">Свернуть</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ConcertEdit Model { get; set; } = default!;
+    [Parameter] public EventCallback OnClose { get; set; }
+}

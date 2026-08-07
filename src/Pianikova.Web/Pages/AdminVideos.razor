@@ -1,0 +1,177 @@
+@page "/admin/videos"
+@inject GitHubAuthState Auth
+@inject GitHubApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>Видео · Редактор</PageTitle>
+<HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
+
+<main class="admin-shell">
+    <div class="admin-header">
+        <h1>Видео</h1>
+        <a class="admin-back" href="/admin">← Ко всем разделам</a>
+    </div>
+
+    @if (_loading)
+    {
+        <p>Загрузка…</p>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <p class="admin-error">@_error</p>
+        }
+        @if (_success is not null)
+        {
+            <p class="admin-success">@_success</p>
+        }
+
+        @foreach (var video in _videos)
+        {
+            <div class="admin-card">
+                <div class="admin-list-item-head">
+                    <div>
+                        <strong>@video.TitleEn.Trim()</strong>
+                        @if (video.Featured)
+                        {
+                            <span class="admin-badge">На главной</span>
+                        }
+                    </div>
+                    <div class="admin-row-actions">
+                        <button type="button" class="button" @onclick="() => Toggle(video)">
+                            @(_editing == video ? "Свернуть" : "Изменить")
+                        </button>
+                        <button type="button" class="button button-quiet" @onclick="() => Remove(video)">Удалить</button>
+                    </div>
+                </div>
+                @if (_editing == video)
+                {
+                    <VideoEditor Model="video" OnClose="() => Toggle(video)" OnSetFeatured="() => SetFeatured(video)" />
+                }
+            </div>
+        }
+
+        <button type="button" class="button" @onclick="AddVideo">Добавить видео</button>
+
+        <div class="admin-actions">
+            <button class="button button-primary" @onclick="SaveAsync" disabled="@_saving">
+                @(_saving ? "Сохраняем…" : "Сохранить всё")
+            </button>
+        </div>
+    }
+</main>
+
+@code {
+    private bool _loading = true;
+    private bool _saving;
+    private string? _error;
+    private string? _success;
+
+    private VideosDocument? _originalEn;
+    private VideosDocument? _originalRu;
+    private readonly List<VideoEdit> _videos = [];
+    private VideoEdit? _editing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        if (!Auth.IsAuthenticated)
+        {
+            Nav.NavigateTo("/admin");
+            return;
+        }
+
+        try
+        {
+            _originalEn = await Api.GetFileAsync<VideosDocument>("content/videos/en/videos.json");
+            _originalRu = await Api.GetFileAsync<VideosDocument>("content/videos/ru/videos.json");
+
+            var ruById = _originalRu.Items.ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
+            foreach (var en in _originalEn.Items)
+            {
+                var ru = ruById.TryGetValue(en.Id, out var match) ? match : en;
+                _videos.Add(VideoEdit.FromDocuments(en, ru));
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Не удалось загрузить данные: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void Toggle(VideoEdit video) => _editing = _editing == video ? null : video;
+
+    private void SetFeatured(VideoEdit video)
+    {
+        foreach (var other in _videos)
+        {
+            other.Featured = other == video;
+        }
+    }
+
+    private void AddVideo()
+    {
+        var video = new VideoEdit { Id = $"new-video-{_videos.Count + 1}" };
+        _videos.Add(video);
+        _editing = video;
+    }
+
+    private void Remove(VideoEdit video)
+    {
+        _videos.Remove(video);
+        if (_editing == video)
+        {
+            _editing = null;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_originalEn is null || _originalRu is null)
+        {
+            return;
+        }
+
+        if (_videos.Select(x => x.Id.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != _videos.Count)
+        {
+            _error = "У двух видео совпадает ID — сделайте идентификаторы уникальными.";
+            return;
+        }
+
+        if (_videos.Count(x => x.Featured) > 1)
+        {
+            _error = "Можно отметить только одно видео как «показывать на главной».";
+            return;
+        }
+
+        _error = null;
+        _success = null;
+        _saving = true;
+        try
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var updatedEn = _originalEn with { LastUpdated = today, Items = _videos.Select(x => x.ToDocument(english: true)).ToArray() };
+            var updatedRu = _originalRu with { LastUpdated = today, Items = _videos.Select(x => x.ToDocument(english: false)).ToArray() };
+
+            await Api.PutJsonAsync("content/videos/en/videos.json", updatedEn, "Update videos (en) via admin");
+            await Api.PutJsonAsync("content/videos/ru/videos.json", updatedRu, "Update videos (ru) via admin");
+
+            _originalEn = updatedEn;
+            _originalRu = updatedRu;
+            _success = "Сохранено.";
+        }
+        catch (Exception ex)
+        {
+            _error = $"Не удалось сохранить: {ex.Message}";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

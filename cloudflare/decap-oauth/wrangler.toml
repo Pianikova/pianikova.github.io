@@ -1,0 +1,9 @@
+name = "pianikova-cms-oauth"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+[vars]
+GITHUB_CLIENT_ID = "Ov23li2GRGZ8itYBJ0Ln"
+
+# GITHUB_CLIENT_SECRET is not stored here — set it with:
+#   wrangler secret put GITHUB_CLIENT_SECRET

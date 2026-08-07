@@ -1,1 +1,8 @@
-<Solution />
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Pianikova.Web/Pianikova.Web.csproj" />
+  </Folder>
+  <Folder Name="/build/">
+    <Project Path="build/build.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111111" />
+    <meta name="description" content="Julia Pianikova — classical violinist. Concerts, performances, biography and press materials." />
+    <base href="/" />
+    <link rel="stylesheet" href="css/app.css" />
+    <title>Julia Pianikova — violin</title>
+</head>
+<body>
+    <div id="app">
+        <div class="boot-screen"><span></span><p>Silence before the first note</p></div>
+    </div>
+    <div id="blazor-error-ui" hidden>An unexpected error occurred. <a href="." class="reload">Reload</a></div>
+    <script>
+        // GitHub Pages has no real server-side routing: a direct load or refresh of a
+        // client-side route like /admin 404s. 404.html stashes the intended path in
+        // sessionStorage before bouncing here; restore it before Blazor's router starts.
+        (function () {
+            var redirect = window.sessionStorage.getItem("spa-redirect-path");
+            if (redirect) {
+                window.sessionStorage.removeItem("spa-redirect-path");
+                if (redirect !== location.pathname + location.search + location.hash) {
+                    history.replaceState(null, "", redirect);
+                }
+            }
+        })();
+    </script>
+    <script src="js/language.js"></script>
+    <script src="js/adminAuth.js"></script>
+    <script src="js/documentActions.js"></script>
+    <script src="_framework/blazor.webassembly.js" autostart="false"></script>
+    <script>
+        // Fingerprinted framework assets are immutable in production. During local
+        // development a stopped/rebuilt server can otherwise leave a failed response
+        // in the browser cache under the same fingerprint. Give each local page load
+        // its own resource URL while preserving the integrity check and production URLs.
+        (function () {
+            var isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+            var localBuild = isLocal ? Date.now().toString(36) : null;
+            Blazor.start({
+                loadBootResource: function (type, name, defaultUri) {
+                    if (!localBuild) return null;
+                    return defaultUri + (defaultUri.includes("?") ? "&" : "?") + "local-build=" + localBuild;
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,489 @@
+@page "/"
+@inject ISiteContentSource ContentSource
+@inject IJSRuntime JS
+@inject IStringLocalizer<Ui> L
+
+<PageTitle>@(_content is null ? "Julia Pianikova — violin" : _content.Identity.Name.In(_language))</PageTitle>
+
+@if (_error is not null)
+{
+    <main class="fatal-state">
+        <p class="eyebrow">@L["ContentUnavailable"]</p>
+        <h1>@L["LoadFailed"]</h1>
+        <p>@_error</p>
+        <button class="button button-primary" @onclick="LoadAsync">@L["TryAgain"]</button>
+    </main>
+}
+else if (_content is null)
+{
+    <main class="loading-state" aria-live="polite">
+        <span class="loading-line"></span>
+        <p>@L["Loading"]</p>
+    </main>
+}
+else
+{
+    var content = _content;
+    var upcomingConcerts = content.Concerts.Where(x => x.StartsAt >= DateTimeOffset.Now).OrderBy(x => x.StartsAt).ToArray();
+    var pastConcerts = content.Concerts.Where(x => x.StartsAt < DateTimeOffset.Now).OrderByDescending(x => x.StartsAt).ToArray();
+    var nextConcert = upcomingConcerts.FirstOrDefault();
+    var featured = content.Videos.FirstOrDefault(x => x.Featured);
+    var galleryVideos = content.Videos.Where(x => !x.Featured).ToArray();
+    var galleryPhotos = content.Photos;
+    var hasUpcomingConcerts = upcomingConcerts.Length > 0;
+    var hasConcerts = content.Concerts.Count > 0;
+    var hasFeatured = featured is not null;
+    var hasGallery = galleryVideos.Length > 0;
+    var hasPhotos = galleryPhotos.Count > 0;
+    var biographySummary = content.Biography.Summary.In(_language);
+    var biographyFull = content.Biography.Full.In(_language);
+    var biographyQuote = content.Biography.Quote.In(_language);
+    var hasBiography = !string.IsNullOrWhiteSpace(biographySummary) || !string.IsNullOrWhiteSpace(biographyFull);
+    var hasFullBiography = !string.IsNullOrWhiteSpace(biographyFull);
+    var hasBiographyQuote = !string.IsNullOrWhiteSpace(biographyQuote);
+    var showFullBiography = hasFullBiography && (_showFullBiography || string.IsNullOrWhiteSpace(biographySummary));
+    var repertoire = content.Repertoire.In(_language);
+    var hasRepertoire = !string.IsNullOrWhiteSpace(repertoire);
+    var hasProjects = content.Projects.Count > 0;
+    var hasPress = content.Press.Quotes.Count > 0 || !string.IsNullOrWhiteSpace(content.Press.PressKitPath) || !string.IsNullOrWhiteSpace(content.Press.PhotosPath);
+    var heroStatement = content.Hero.Statement.In(_language);
+    var hasHeroDetails = !string.IsNullOrWhiteSpace(heroStatement) || hasFeatured || hasUpcomingConcerts;
+
+    <header class="site-header @( _menuOpen ? "menu-open" : null )">
+        <a class="wordmark" href="#top" aria-label="@content.Identity.Name.In(_language)">
+            <span>@content.Identity.Name.In(_language)</span>
+            <small>@content.Identity.Profession.In(_language)</small>
+        </a>
+        <button class="menu-toggle" @onclick="ToggleMenu" aria-expanded="@_menuOpen" aria-controls="main-nav">
+            <span>@(_menuOpen ? L["Close"] : L["Menu"])</span>
+        </button>
+        <nav id="main-nav" class="main-nav" aria-label="@L["MainNavigation"]">
+            @if (hasFeatured)
+            {
+                <a href="#listen" @onclick="CloseMenu">@L["Listen"]</a>
+            }
+            @if (hasGallery)
+            {
+                <a href="#videos" @onclick="CloseMenu">@L["Videos"]</a>
+            }
+            @if (hasPhotos)
+            {
+                <a href="#photos" @onclick="CloseMenu">@L["Photos"]</a>
+            }
+            @if (hasBiography)
+            {
+                <a href="#biography" @onclick="CloseMenu">@L["Biography"]</a>
+            }
+            @if (hasProjects)
+            {
+                <a href="#projects" @onclick="CloseMenu">@L["Projects"]</a>
+            }
+            @if (hasRepertoire)
+            {
+                <a href="#repertoire" @onclick="CloseMenu">@L["Repertoire"]</a>
+            }
+            @if (hasConcerts)
+            {
+                <a href="#concerts" @onclick="CloseMenu">@L["Concerts"]</a>
+            }
+            @if (hasPress)
+            {
+                <a href="#press" @onclick="CloseMenu">@L["Press"]</a>
+            }
+            <button class="language-button" @onclick="SwitchLanguageAsync" aria-label="@L["SwitchLanguage"]">@(_language == "ru" ? "EN" : "RU")</button>
+        </nav>
+    </header>
+
+    <main id="top">
+        <section class="hero" aria-labelledby="hero-title">
+            <img class="hero-image" src="@ContentSource.AssetUrl(content.Hero.Image.Path)" alt="@content.Hero.Image.Alt.In(_language)" />
+            <div class="hero-shade"></div>
+            <div class="hero-content @(!hasHeroDetails ? "hero-content-name-only" : null)">
+                <p class="eyebrow">@content.Identity.Profession.In(_language)</p>
+                <h1 id="hero-title">@NamePart(content.Identity.Name.In(_language), 0)<br />@NamePart(content.Identity.Name.In(_language), 1)</h1>
+                @if (!string.IsNullOrWhiteSpace(heroStatement))
+                {
+                    <p class="hero-statement">@heroStatement</p>
+                }
+                @if (hasFeatured || hasUpcomingConcerts)
+                {
+                    <div class="hero-actions">
+                        @if (hasFeatured)
+                        {
+                            <a class="button button-primary" href="#listen"><span aria-hidden="true">▶</span> @L["WatchPerformance"]</a>
+                        }
+                        @if (hasUpcomingConcerts)
+                        {
+                            <a class="button button-quiet" href="#concerts">@L["UpcomingConcerts"] <span aria-hidden="true">↓</span></a>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+
+        @if (nextConcert is not null)
+        {
+            <section class="next-concert section-pad" aria-label="@L["NextConcert"]">
+                <div class="concert-date">
+                    <strong>@nextConcert.StartsAt.ToString("dd", CultureInfo.InvariantCulture)</strong>
+                    <span>@Month(nextConcert.StartsAt)</span>
+                    <small>@nextConcert.StartsAt.Year</small>
+                </div>
+                <div class="concert-place">
+                    <p class="eyebrow">@ConcertLocation(nextConcert)</p>
+                    <h2>@nextConcert.Venue.In(_language)</h2>
+                </div>
+                <div class="concert-program">
+                    @foreach (var work in nextConcert.Program)
+                    {
+                        <p><strong>@work.Composer</strong> · @work.Work.In(_language)</p>
+                    }
+                    @if (nextConcert.Program.Count == 0 && !string.IsNullOrWhiteSpace(nextConcert.Series.In(_language)))
+                    {
+                        <p><strong>@nextConcert.Series.In(_language)</strong></p>
+                    }
+                </div>
+                <TicketAction Concert="nextConcert" />
+            </section>
+        }
+
+        @if (featured is not null)
+        {
+            var featuredVideoId = YouTube.ExtractVideoId(featured.YouTubeUrl);
+            <section id="listen" class="performance section-pad numbered-section">
+                <div class="performance-grid">
+                    @if (featuredVideoId is not null && _playFeatured)
+                    {
+                        <div class="performance-poster">
+                            <iframe src="@YouTube.EmbedUrl(featuredVideoId)" title="@featured.Title.In(_language)"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowfullscreen></iframe>
+                        </div>
+                    }
+                    else if (featuredVideoId is not null)
+                    {
+                        <button type="button" class="performance-poster" @onclick="() => _playFeatured = true" aria-label="@L["WatchPerformance"]">
+                            <img src="@YouTube.ThumbnailUrl(featuredVideoId)" alt="" loading="lazy" />
+                            <span class="play-mark" aria-hidden="true">▶</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <a class="performance-poster" href="@featured.YouTubeUrl" target="_blank" rel="noopener">
+                            <span class="play-mark" aria-hidden="true">▶</span>
+                        </a>
+                    }
+                    <div class="performance-copy">
+                        <p class="eyebrow">@featured.Composer</p>
+                        <h3>@featured.Title.In(_language)</h3>
+                        @if (!string.IsNullOrWhiteSpace(featured.Caption.In(_language)))
+                        {
+                            <MarkdownContent Source="@featured.Caption.In(_language)" CssClass="performance-description" />
+                        }
+                        <a class="text-link" href="@featured.YouTubeUrl" target="_blank" rel="noopener">@L["WatchOnYouTube"] <span aria-hidden="true">↗</span></a>
+                    </div>
+                </div>
+            </section>
+        }
+
+        @if (galleryVideos.Length > 0)
+        {
+            <section id="videos" class="videos section-pad numbered-section">
+                <header class="section-heading">
+                    <h2>@L["Recordings"]</h2>
+                </header>
+                <div class="video-grid">
+                    @foreach (var video in galleryVideos)
+                    {
+                        <VideoCard Video="video" Language="_language" />
+                    }
+                </div>
+            </section>
+        }
+
+        @if (hasPhotos)
+        {
+            <section id="photos" class="photos section-pad numbered-section">
+                <header class="section-heading">
+                    <h2>@L["PhotoGallery"]</h2>
+                </header>
+                <div class="photo-grid">
+                    @for (var i = 0; i < galleryPhotos.Count; i++)
+                    {
+                        var index = i;
+                        <PhotoCard Photo="galleryPhotos[index]" Language="_language" OnOpen="() => OpenLightbox(index)" />
+                    }
+                </div>
+            </section>
+        }
+
+        @if (hasBiography)
+        {
+            var biographyText = showFullBiography ? biographyFull : biographySummary;
+            <section id="biography" class="biography section-pad numbered-section @(!hasBiographyQuote ? "biography-standard" : null) @(showFullBiography ? "show-full" : null)">
+                @if (hasBiographyQuote)
+                {
+                    <blockquote>«@biographyQuote»</blockquote>
+                }
+                else
+                {
+                    <header class="section-heading">
+                        <h2>@L["Biography"]</h2>
+                    </header>
+                }
+                <div class="biography-copy">
+                    @if (hasBiographyQuote)
+                    {
+                        <p class="eyebrow">@L["Biography"]</p>
+                    }
+                    @if (hasFullBiography && !string.IsNullOrWhiteSpace(biographySummary))
+                    {
+                        <div class="document-tabs" role="group" aria-label="@L["BiographyVersion"]">
+                            <button type="button" class="@(!showFullBiography ? "active" : null)" @onclick="() => _showFullBiography = false">@L["ShortBiography"]</button>
+                            <button type="button" class="@(showFullBiography ? "active" : null)" @onclick="() => _showFullBiography = true">@L["FullBiography"]</button>
+                        </div>
+                    }
+                    <MarkdownDocument Id="biography-document" Source="@biographyText"
+                                      CopyLabel="@L["Copy"]" CopiedLabel="@L["Copied"]" PrintLabel="@L["Print"]" />
+                </div>
+            </section>
+        }
+
+        @if (hasProjects)
+        {
+            <section id="projects" class="projects section-pad numbered-section">
+                <header class="section-heading">
+                    <h2>@L["ArtisticProjects"]</h2>
+                </header>
+                <div class="project-grid">
+                    @foreach (var project in content.Projects)
+                    {
+                        <article class="project-card project-card-@project.Id">
+                            @if (!string.IsNullOrWhiteSpace(project.Image.Path))
+                            {
+                                <img src="@ContentSource.AssetUrl(project.Image.Path)" alt="@project.Image.Alt.In(_language)" loading="lazy" />
+                                @if (!string.IsNullOrWhiteSpace(project.Image.Credit))
+                                {
+                                    <small class="project-credit">@project.Image.Credit</small>
+                                }
+                            }
+                            <div class="project-copy">
+                                <h3>@project.Title.In(_language)</h3>
+                                @if (!string.IsNullOrWhiteSpace(project.Description.In(_language)))
+                                {
+                                    <MarkdownContent Source="@project.Description.In(_language)" CssClass="project-description" />
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (hasRepertoire)
+        {
+            <section id="repertoire" class="document-section section-pad numbered-section">
+                <header class="section-heading">
+                    <h2>@L["Repertoire"]</h2>
+                </header>
+                <MarkdownDocument Id="repertoire-document" Source="@repertoire"
+                                  CopyLabel="@L["Copy"]" CopiedLabel="@L["Copied"]" PrintLabel="@L["Print"]" />
+            </section>
+        }
+
+        @if (upcomingConcerts.Length > 0)
+        {
+            <section id="concerts" class="concerts section-pad numbered-section">
+                <header class="section-heading">
+                    <h2>@L["UpcomingConcerts"]</h2>
+                </header>
+                <div class="concert-list">
+                    @foreach (var concert in upcomingConcerts)
+                    {
+                        <article class="concert-row">
+                            <time datetime="@concert.StartsAt.ToString("O")">
+                                <strong>@concert.StartsAt.ToString("dd.MM", CultureInfo.InvariantCulture)</strong>
+                                @if (concert.StartsAt.TimeOfDay != TimeSpan.Zero)
+                                {
+                                    <span>@concert.StartsAt.ToString("HH:mm", CultureInfo.InvariantCulture)</span>
+                                }
+                            </time>
+                            <div><p class="eyebrow">@ConcertLocation(concert)</p><h3>@concert.Venue.In(_language)</h3></div>
+                            <div class="compact-program">@ConcertSummary(concert)</div>
+                            <TicketAction Concert="concert" />
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (pastConcerts.Length > 0)
+        {
+            <section id="@(upcomingConcerts.Length > 0 ? "past-concerts" : "concerts")" class="concerts past-concerts section-pad numbered-section">
+                <header class="section-heading">
+                    <h2>@L["PastConcerts"]</h2>
+                </header>
+                <div class="concert-list">
+                    @foreach (var concert in pastConcerts)
+                    {
+                        <article class="concert-row">
+                            <time datetime="@concert.StartsAt.ToString("O")">
+                                <strong>@concert.StartsAt.ToString("dd.MM", CultureInfo.InvariantCulture)</strong>
+                                <span>@concert.StartsAt.Year · @concert.StartsAt.ToString("HH:mm", CultureInfo.InvariantCulture)</span>
+                            </time>
+                            <div><p class="eyebrow">@ConcertLocation(concert)</p><h3>@concert.Venue.In(_language)</h3></div>
+                            <div class="compact-program">@ConcertSummary(concert)</div>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (hasPress)
+        {
+            <section id="press" class="press section-pad">
+                <div>
+                    <h2>@L["PressPresenters"]</h2>
+                </div>
+                <div class="press-quotes">
+                    @foreach (var quote in content.Press.Quotes)
+                    {
+                        <blockquote>
+                            <MarkdownContent Source="@quote.Text.In(_language)" CssClass="press-quote-content" />
+                            <cite>
+                                @if (!string.IsNullOrWhiteSpace(quote.SourceUrl))
+                                {
+                                    <a href="@quote.SourceUrl" target="_blank" rel="noopener">@quote.Publication</a>
+                                }
+                                else
+                                {
+                                    @quote.Publication
+                                }
+                                @if (!string.IsNullOrWhiteSpace(quote.Author))
+                                {
+                                    <span> · @quote.Author</span>
+                                }
+                                <span> · @quote.PublishedAt.Year</span>
+                            </cite>
+                        </blockquote>
+                    }
+                </div>
+                <div class="press-actions">
+                    @if (!string.IsNullOrWhiteSpace(content.Press.PressKitPath))
+                    {
+                        <a class="text-link" href="@ContentSource.AssetUrl(content.Press.PressKitPath)" target="_blank">@L["PressKit"]</a>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(content.Press.PhotosPath))
+                    {
+                        <a class="press-photo" href="@ContentSource.AssetUrl(content.Press.PhotosPath)" target="_blank">
+                            <img src="@ContentSource.AssetUrl(content.Press.PhotosPath)" alt="@L["PressPhotos"]" loading="lazy" />
+                            <span>@L["PressPhotos"] ↗</span>
+                        </a>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(content.Contacts.ManagementEmail))
+                    {
+                        <a class="text-link" href="mailto:@content.Contacts.ManagementEmail">@L["ContactManagement"]</a>
+                    }
+                </div>
+            </section>
+        }
+    </main>
+
+    <footer class="site-footer section-pad">
+        <div><strong>@content.Identity.Name.In(_language)</strong><span>@content.Identity.Profession.In(_language)</span></div>
+        <div class="footer-links">
+            @foreach (var link in content.Contacts.SocialLinks)
+            {
+                <a href="@link.Url" target="_blank" rel="noopener">@link.Service</a>
+            }
+        </div>
+        <small>© @DateTime.Now.Year @content.Identity.Name.In(_language) · @L["Rights"]</small>
+    </footer>
+
+    <PhotoLightbox Photos="galleryPhotos" Language="_language" CurrentIndex="_lightboxIndex"
+                   OnClose="CloseLightbox" OnPrev="PreviousPhoto" OnNext="NextPhoto" />
+}
+
+@code {
+    private SiteContent? _content;
+    private string? _error;
+    private const string FallbackLanguage = "en";
+    private string _language = FallbackLanguage;
+    private bool _menuOpen;
+    private bool _playFeatured;
+    private bool _showFullBiography;
+    private int? _lightboxIndex;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _error = null;
+        try
+        {
+            var settings = await ContentSource.LoadSettingsAsync();
+            _language = NormalizeLanguage(CultureInfo.CurrentUICulture.Name);
+            if (!settings.AvailableLanguages.Contains(_language, StringComparer.OrdinalIgnoreCase))
+            {
+                _language = settings.DefaultLanguage;
+            }
+            _content = await ContentSource.LoadAsync(_language);
+            await JS.InvokeVoidAsync("pianikovaLanguage.apply", _language);
+        }
+        catch (Exception exception) { _error = exception.Message; }
+    }
+
+    private async Task SwitchLanguageAsync()
+    {
+        var language = _language == "ru" ? "en" : "ru";
+        _menuOpen = false;
+        await JS.InvokeVoidAsync("pianikovaLanguage.save", language);
+    }
+
+    private static string NormalizeLanguage(string? language) =>
+        language?.Split('-', '_', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.ToLowerInvariant() ?? string.Empty;
+
+    private void ToggleMenu() => _menuOpen = !_menuOpen;
+    private void CloseMenu() => _menuOpen = false;
+
+    private void OpenLightbox(int index) => _lightboxIndex = index;
+    private void CloseLightbox() => _lightboxIndex = null;
+
+    private void NextPhoto()
+    {
+        var count = _content?.Photos.Count ?? 0;
+        if (count == 0)
+        {
+            return;
+        }
+
+        _lightboxIndex = ((_lightboxIndex ?? 0) + 1) % count;
+    }
+
+    private void PreviousPhoto()
+    {
+        var count = _content?.Photos.Count ?? 0;
+        if (count == 0)
+        {
+            return;
+        }
+
+        _lightboxIndex = ((_lightboxIndex ?? 0) - 1 + count) % count;
+    }
+    private static string Month(DateTimeOffset date) => date.ToString("MMMM", CultureInfo.CurrentCulture).ToUpperInvariant();
+
+    private string ConcertLocation(Concert concert) =>
+        string.Join(" · ", new[] { concert.City.In(_language), concert.Country.In(_language) }
+            .Where(value => !string.IsNullOrWhiteSpace(value)));
+
+    private string ConcertSummary(Concert concert) =>
+        concert.Program.Count > 0
+            ? string.Join(" · ", concert.Program.Select(work => work.Composer))
+            : concert.Series.In(_language);
+
+    private static string NamePart(string name, int index)
+    {
+        var parts = name.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        return index < parts.Length ? parts[index] : string.Empty;
+    }
+}

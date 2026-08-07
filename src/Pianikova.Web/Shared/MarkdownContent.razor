@@ -1,0 +1,15 @@
+@using Markdig
+
+<div class="markdown-content @CssClass">@((MarkupString)Render(Source))</div>
+
+@code {
+    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .DisableHtml()
+        .Build();
+
+    [Parameter, EditorRequired] public string Source { get; set; } = "";
+    [Parameter] public string CssClass { get; set; } = "";
+
+    private static string Render(string source) => Markdown.ToHtml(source, Pipeline);
+}

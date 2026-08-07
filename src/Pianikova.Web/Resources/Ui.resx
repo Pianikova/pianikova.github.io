@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="ContentUnavailable" xml:space="preserve"><value>Content is temporarily unavailable</value></data>
+  <data name="LoadFailed" xml:space="preserve"><value>The programme could not be loaded.</value></data>
+  <data name="TryAgain" xml:space="preserve"><value>Try again</value></data>
+  <data name="Loading" xml:space="preserve"><value>Preparing the silence before the first note…</value></data>
+  <data name="Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Menu" xml:space="preserve"><value>Menu</value></data>
+  <data name="MainNavigation" xml:space="preserve"><value>Main navigation</value></data>
+  <data name="Concerts" xml:space="preserve"><value>Concerts</value></data>
+  <data name="Listen" xml:space="preserve"><value>Listen</value></data>
+  <data name="Biography" xml:space="preserve"><value>Biography</value></data>
+  <data name="Projects" xml:space="preserve"><value>Projects</value></data>
+  <data name="Ensembles" xml:space="preserve"><value>Ensembles</value></data>
+  <data name="ArtisticProjects" xml:space="preserve"><value>Artistic projects</value></data>
+  <data name="LearnMore" xml:space="preserve"><value>Learn more</value></data>
+  <data name="BiographyVersion" xml:space="preserve"><value>Biography version</value></data>
+  <data name="ShortBiography" xml:space="preserve"><value>Short</value></data>
+  <data name="FullBiography" xml:space="preserve"><value>Full</value></data>
+  <data name="Repertoire" xml:space="preserve"><value>Repertoire</value></data>
+  <data name="Copy" xml:space="preserve"><value>Copy text</value></data>
+  <data name="Copied" xml:space="preserve"><value>Copied</value></data>
+  <data name="Print" xml:space="preserve"><value>Print</value></data>
+  <data name="Press" xml:space="preserve"><value>Press</value></data>
+  <data name="SwitchLanguage" xml:space="preserve"><value>Switch to Russian</value></data>
+  <data name="WatchPerformance" xml:space="preserve"><value>Watch video</value></data>
+  <data name="UpcomingConcerts" xml:space="preserve"><value>Upcoming concerts</value></data>
+  <data name="Opening" xml:space="preserve"><value>Opening</value></data>
+  <data name="NextConcert" xml:space="preserve"><value>Next concert</value></data>
+  <data name="Sound" xml:space="preserve"><value>Sound</value></data>
+  <data name="WatchOnYouTube" xml:space="preserve"><value>Watch on YouTube</value></data>
+  <data name="Videos" xml:space="preserve"><value>Video</value></data>
+  <data name="Recordings" xml:space="preserve"><value>Video</value></data>
+  <data name="Photos" xml:space="preserve"><value>Photos</value></data>
+  <data name="PhotoGallery" xml:space="preserve"><value>Photos</value></data>
+  <data name="PreviousPhoto" xml:space="preserve"><value>Previous photo</value></data>
+  <data name="NextPhoto" xml:space="preserve"><value>Next photo</value></data>
+  <data name="Portrait" xml:space="preserve"><value>Portrait</value></data>
+  <data name="Schedule" xml:space="preserve"><value>Schedule</value></data>
+  <data name="Archive" xml:space="preserve"><value>Archive</value></data>
+  <data name="PastConcerts" xml:space="preserve"><value>Past concerts</value></data>
+  <data name="NewDates" xml:space="preserve"><value>New dates are being prepared. Please check back soon.</value></data>
+  <data name="ProfessionalMaterials" xml:space="preserve"><value>Professional materials</value></data>
+  <data name="PressPresenters" xml:space="preserve"><value>Press and presenters</value></data>
+  <data name="PressDescription" xml:space="preserve"><value>Biography, high-resolution photography and verified materials will be collected here.</value></data>
+  <data name="ComingSoon" xml:space="preserve"><value>coming soon</value></data>
+  <data name="ContactManagement" xml:space="preserve"><value>Contact management</value></data>
+  <data name="PressKit" xml:space="preserve"><value>Press kit</value></data>
+  <data name="PressPhotos" xml:space="preserve"><value>Press photos</value></data>
+  <data name="Rights" xml:space="preserve"><value>All rights reserved</value></data>
+  <data name="Tickets" xml:space="preserve"><value>Tickets</value></data>
+  <data name="SoldOut" xml:space="preserve"><value>Sold out</value></data>
+  <data name="FreeAdmission" xml:space="preserve"><value>Free admission</value></data>
+  <data name="DetailsComingSoon" xml:space="preserve"><value>Details coming soon</value></data>
+</root>

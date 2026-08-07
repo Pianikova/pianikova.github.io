@@ -1,0 +1,35 @@
+@using Markdig
+@inject IJSRuntime JS
+
+<div id="@Id" class="markdown-document">
+    <div class="document-actions" data-print-hidden>
+        <button type="button" class="document-action" @onclick="CopyAsync">@(_copied ? CopiedLabel : CopyLabel)</button>
+        <button type="button" class="document-action" @onclick="PrintAsync">@PrintLabel</button>
+    </div>
+    <div class="document-content">@((MarkupString)Render(Source))</div>
+</div>
+
+@code {
+    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .DisableHtml()
+        .Build();
+
+    [Parameter, EditorRequired] public string Id { get; set; } = "";
+    [Parameter, EditorRequired] public string Source { get; set; } = "";
+    [Parameter, EditorRequired] public string CopyLabel { get; set; } = "";
+    [Parameter, EditorRequired] public string CopiedLabel { get; set; } = "";
+    [Parameter, EditorRequired] public string PrintLabel { get; set; } = "";
+
+    private bool _copied;
+
+    private static string Render(string source) => Markdown.ToHtml(source, Pipeline);
+
+    private async Task CopyAsync()
+    {
+        await JS.InvokeVoidAsync("pianikovaDocuments.copy", $"#{Id} .document-content");
+        _copied = true;
+    }
+
+    private async Task PrintAsync() => await JS.InvokeVoidAsync("pianikovaDocuments.print", Id);
+}
