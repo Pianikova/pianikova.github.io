@@ -519,21 +519,22 @@ public class EditMcpTool
     @SuppressWarnings("nls")
     private String getReplacementErrorMessage(boolean replaceAll, ReplaceResult replaceResult)
     {
-        if (replaceAll)
+        if (!replaceAll && replaceResult.hasMultipleOccurrences())
         {
-            return "Original content not found in file. Verify the `old_content`.";
+            return "Multiple matches found for original content. Change the `old_content` to avoid multiple matches. Provide a larger `old_content` with more surrounding lines (minimum 3).";
         }
-        else
+
+        var message = new StringBuilder("Original content not found in file. Verify the `old_content`.");
+        var hint = replaceResult.getNearestMatchHint();
+        if (hint != null && !hint.isBlank())
         {
-            if (replaceResult.hasMultipleOccurrences())
-            {
-                return "Multiple matches found for original content. Change the `old_content` to avoid multiple matches. Provide a larger `old_content` with more surrounding lines (minimum 3).";
-            }
-            else
-            {
-                return "Original content not found in file. Verify the `old_content`.";
-            }
+            message.append("\n\nClosest text actually found in the file:\n```\n")
+                .append(hint)
+                .append("\n```\nThe file does not contain the requested `old_content` verbatim. Compare it against ")
+                .append("the excerpt above (re-`Read` the file if unsure) and retry with `old_content` matching ")
+                .append("the file exactly, including whitespace.");
         }
+        return message.toString();
     }
 
     /**

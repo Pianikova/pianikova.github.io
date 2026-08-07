@@ -1,8 +1,10 @@
 package com.e1c.edt.ai.tools;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -21,6 +23,21 @@ public class ContentReplacer implements IContentReplacer
      * the whole span in between, which would delete a large, unintended block.
      */
     private static final int MAX_FUZZY_MATCH_GROWTH_FACTOR = 3;
+
+    /**
+     * Minimum token-overlap (Jaccard) score for a line in the file to be offered as a "closest match"
+     * hint on a not-found failure. Below this, an unrelated line would mislead more than help.
+     */
+    private static final double MIN_HINT_SIMILARITY = 0.4;
+
+    /** Lines of context shown before/after the best-matching line in a not-found hint. */
+    private static final int HINT_CONTEXT_LINES = 2;
+
+    /** Only the first few lines of a multi-line `old_content` are considered as the anchor to search for. */
+    private static final int MAX_ANCHOR_CANDIDATE_LINES = 10;
+
+    /** An anchor line shorter than this is too generic (e.g. a lone brace) to search for reliably. */
+    private static final int MIN_ANCHOR_LENGTH = 8;
 
     private final List<IReplacementStrategy> replacementStrategies;
 
@@ -66,7 +83,8 @@ public class ContentReplacer implements IContentReplacer
             findReplacement(normalizedCurrentContent, normalizedOriginContent, replaceAll);
         if (searchResult.notFound)
         {
-            return new ReplaceResult(currentContent, 0, 0, false);
+            String hint = findNearestMatchHint(normalizedCurrentContent, normalizedOriginContent);
+            return new ReplaceResult(currentContent, 0, 0, false, hint);
         }
         if (searchResult.multipleMatches)
         {
@@ -177,6 +195,16 @@ public class ContentReplacer implements IContentReplacer
 
             for (String candidate : strategy.findCandidates(content, find))
             {
+                // An empty candidate (e.g. a whitespace-only `old_content` trimmed away by a fuzzy
+                // strategy) is never a meaningful match here - `find` is guaranteed non-empty at this
+                // point (the empty-origin case is handled earlier by replaceWithEmptyOrigin). Beyond
+                // being meaningless, String.indexOf("", n) never returns -1, so scanning occurrences
+                // of an empty candidate below would loop forever.
+                if (candidate.isEmpty())
+                {
+                    continue;
+                }
+
                 int firstIndex = content.indexOf(candidate);
                 if (firstIndex == -1)
                 {
@@ -228,6 +256,119 @@ public class ContentReplacer implements IContentReplacer
         }
 
         return ReplacementSearchResult.notFound();
+    }
+
+    /**
+     * When {@code old_content} matches nothing in the file, finds the line most similar to it and
+     * returns a short excerpt around that line — so the caller can correct `old_content` in one
+     * follow-up call instead of blindly re-guessing or re-reading the whole file.
+     *
+     * @return the excerpt (1-based line numbers), or {@code null} when no line is a confident enough
+     *         match to be worth surfacing.
+     */
+    private String findNearestMatchHint(String normalizedCurrentContent, String normalizedOriginContent)
+    {
+        String anchor = pickAnchorLine(normalizedOriginContent);
+        if (anchor == null)
+        {
+            return null;
+        }
+
+        Set<String> anchorTokens = tokenize(anchor);
+        if (anchorTokens.isEmpty())
+        {
+            return null;
+        }
+
+        String[] lines = normalizedCurrentContent.split(NORMALIZED_LINE_DELIMITER, -1);
+        int bestIndex = -1;
+        double bestScore = 0;
+        for (int i = 0; i < lines.length; i++)
+        {
+            String trimmed = lines[i].trim();
+            if (trimmed.isEmpty())
+            {
+                continue;
+            }
+
+            double score = jaccard(anchorTokens, tokenize(trimmed));
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestIndex = i;
+            }
+        }
+
+        if (bestIndex < 0 || bestScore < MIN_HINT_SIMILARITY)
+        {
+            return null;
+        }
+
+        int from = Math.max(0, bestIndex - HINT_CONTEXT_LINES);
+        int to = Math.min(lines.length - 1, bestIndex + HINT_CONTEXT_LINES);
+        StringBuilder hint = new StringBuilder();
+        for (int i = from; i <= to; i++)
+        {
+            hint.append(i + 1).append(": ").append(lines[i]); //$NON-NLS-1$
+            if (i < to)
+            {
+                hint.append('\n');
+            }
+        }
+        return hint.toString();
+    }
+
+    /**
+     * Picks the most distinctive line among the first few lines of `old_content` to search for: the
+     * longest one, since longer lines carry more identifying tokens than e.g. a lone brace.
+     */
+    private String pickAnchorLine(String normalizedOriginContent)
+    {
+        String[] originLines = normalizedOriginContent.split(NORMALIZED_LINE_DELIMITER, -1);
+        String bestLine = null;
+        for (int i = 0; i < Math.min(originLines.length, MAX_ANCHOR_CANDIDATE_LINES); i++)
+        {
+            String trimmed = originLines[i].trim();
+            if (trimmed.length() >= MIN_ANCHOR_LENGTH && (bestLine == null || trimmed.length() > bestLine.length()))
+            {
+                bestLine = trimmed;
+            }
+        }
+        return bestLine;
+    }
+
+    @SuppressWarnings("nls")
+    private Set<String> tokenize(String line)
+    {
+        Set<String> tokens = new HashSet<>();
+        for (String token : line.toLowerCase(Locale.ROOT).split("[^\\p{L}\\p{Nd}_]+"))
+        {
+            if (token.length() >= 2)
+            {
+                tokens.add(token);
+            }
+        }
+        return tokens;
+    }
+
+    private double jaccard(Set<String> a, Set<String> b)
+    {
+        if (a.isEmpty() || b.isEmpty())
+        {
+            return 0;
+        }
+
+        int intersection = 0;
+        for (String token : a)
+        {
+            if (b.contains(token))
+            {
+                intersection++;
+            }
+        }
+
+        int union = a.size() + b.size() - intersection;
+        return union == 0 ? 0 : (double)intersection / union;
     }
 
     private String stripBOM(String content)

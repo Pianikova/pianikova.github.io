@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.List;
 import java.util.function.LongSupplier;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -73,5 +74,16 @@ public class ConversationProgressReporter
         reported = true;
         monitor.setTaskName(NLS.bind(Messages.ConversationProgressTaskName, Integer.valueOf(round),
             Integer.valueOf(charactersReceived)));
+    }
+
+    /**
+     * Shows which tool(s) are about to run, unthrottled — this fires once per round rather than once
+     * per streamed token, so there is no flood to guard against, and the name should switch the moment
+     * the round moves from "receiving text" to "waiting on a tool".
+     */
+    @Override
+    public void onToolCallStart(List<String> toolNames)
+    {
+        monitor.setTaskName(NLS.bind(Messages.ConversationProgressToolCall, String.join(", ", toolNames))); //$NON-NLS-1$
     }
 }

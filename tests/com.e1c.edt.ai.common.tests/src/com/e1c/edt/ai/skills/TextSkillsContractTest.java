@@ -64,6 +64,11 @@ public class TextSkillsContractTest
                 skill.getMetadata().getAllowedTools().isPresent());
             assertTrue(skillId + " must not expose model tools",
                 skill.getMetadata().getAllowedTools().get().isEmpty());
+            assertTrue(skillId + " must declare an autonomous completion policy",
+                skill.getMetadata().getCompletionPolicy().isPresent());
+            assertEquals("#END#", skill.getMetadata().getCompletionPolicy().get().getMarker());
+            assertTrue(skillId + " must reject JSON instead of a field value",
+                skill.getMetadata().getCompletionPolicy().get().isRejectToolLikeJson());
             assertTrue(skillId + " must reference !tool('visual_context')",
                 skill.getToolIds().contains("visual_context"));
 

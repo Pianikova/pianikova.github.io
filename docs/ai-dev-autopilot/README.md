@@ -59,7 +59,7 @@ Pick a sortable `<id>` (zero-padded counter or timestamp) — requests are proce
 | field             | required | meaning                                                                                                                                                             |
 |-------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `prompt`          | yes      | user message sent to the assistant (a new conversation is forced each turn)                                                                                          |
-| `project`         | no       | 1C project name to target. Pass the real project name from your environment; never hard-code README examples or translated guesses. (Configuration-level operations name the target project inside the tool arguments.) |
+| `project`         | yes      | 1C project name to target; it must already exist in the workspace or the turn fails before it starts. Pass the real project name from your environment; never hard-code README examples or translated guesses. For a configuration-level task (`createConfiguration`), point this at any existing project as the conversation context — the name of the configuration to create goes into the tool arguments, not here. |
 | `preamble`        | no       | agent preamble prepended to the prompt: omit/`null` → built-in default preamble (drives the model to complete the task with tools); `""` → bare prompt, no preamble; any string → that preamble |
 | `max_tool_rounds` | no       | cap on tool-execution rounds for the turn; omit → harness default (200). Multi-step tasks (object + attributes + form/template) plus self-correction need far more than the chat default of 10 |
 
@@ -188,6 +188,8 @@ failing a metadata task, fix it there:
 
 - **Missing capability** — add or extend an operation in `MetadataOperationRegistry` +
   `MetadataMutationService` (and the object registry `MetadataObjectTypeRegistry` for new types).
+  Operations on the content of an existing form (attributes, commands, items) live in
+  `FormMutationService`; property writing shared by all of them lives in `MetadataPropertyWriter`.
 - **Model chose the wrong operation / parameters** — improve the operation `description` and
   `example` in `MetadataOperationRegistry`, or the tool description in `EditMetadataMcpTool`.
 - **Validation too strict/loose** — adjust `MetadataTypeService` (type/length/precision handling).

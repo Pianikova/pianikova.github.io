@@ -10,6 +10,7 @@ import java.util.Set;
 
 import org.eclipse.core.resources.IProject;
 
+import com.e1c.edt.ai.assistent.model.SkillCompletionPolicy;
 import com.google.common.base.Preconditions;
 
 /**
@@ -25,11 +26,12 @@ public class SendUserMessageRequest
     private final Boolean chat;
     private final Integer maxToolRounds;
     private final Set<String> allowedTools;
+    private final SkillCompletionPolicy completionPolicy;
 
     public SendUserMessageRequest(IProject project, String message, ConversationSession conversationSession,
         boolean forceNewConversation)
     {
-        this(project, message, conversationSession, forceNewConversation, null, null, null, null);
+        this(project, message, conversationSession, forceNewConversation, null, null, null, null, null);
     }
 
     /**
@@ -40,7 +42,7 @@ public class SendUserMessageRequest
     public SendUserMessageRequest(IProject project, String message, ConversationSession conversationSession,
         boolean forceNewConversation, String skillName, Boolean chat, Integer maxToolRounds)
     {
-        this(project, message, conversationSession, forceNewConversation, skillName, chat, maxToolRounds, null);
+        this(project, message, conversationSession, forceNewConversation, skillName, chat, maxToolRounds, null, null);
     }
 
     /**
@@ -53,6 +55,14 @@ public class SendUserMessageRequest
         boolean forceNewConversation, String skillName, Boolean chat, Integer maxToolRounds,
         Set<String> allowedTools)
     {
+        this(project, message, conversationSession, forceNewConversation, skillName, chat, maxToolRounds,
+            allowedTools, null);
+    }
+
+    public SendUserMessageRequest(IProject project, String message, ConversationSession conversationSession,
+        boolean forceNewConversation, String skillName, Boolean chat, Integer maxToolRounds,
+        Set<String> allowedTools, SkillCompletionPolicy completionPolicy)
+    {
         this.project = Preconditions.checkNotNull(project);
         this.message = message;
         this.conversationSession = conversationSession;
@@ -62,6 +72,7 @@ public class SendUserMessageRequest
         this.maxToolRounds = maxToolRounds;
         this.allowedTools = allowedTools == null ? null
             : Collections.unmodifiableSet(new LinkedHashSet<>(allowedTools));
+        this.completionPolicy = completionPolicy;
     }
 
     /**
@@ -94,6 +105,11 @@ public class SendUserMessageRequest
     public Optional<Set<String>> getAllowedTools()
     {
         return Optional.ofNullable(allowedTools);
+    }
+
+    public Optional<SkillCompletionPolicy> getCompletionPolicy()
+    {
+        return Optional.ofNullable(completionPolicy);
     }
 
     public IProject getProject()

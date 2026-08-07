@@ -2,6 +2,8 @@
 name: text-in-other-words
 description: Перефразирует другими словами текст поля, находящегося в фокусе, сохраняя смысл.
 allowed-tools: []
+completion-marker: "#END#"
+reject-tool-like-json: true
 ---
 
 # Перефразирование текста поля

@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.ui;
 
 import java.awt.Desktop;
+import java.io.File;
 import java.net.URI;
 
 import com.e1c.edt.ai.ILog;
@@ -32,6 +33,22 @@ public class Web
                 {
                     desktop.browse(new URI(url));
                 }
+            }
+        }
+        catch (Exception error)
+        {
+            log.logError(error);
+        }
+    }
+
+    @Override
+    public void open(File file)
+    {
+        try
+        {
+            if (Desktop.isDesktopSupported())
+            {
+                Desktop.getDesktop().open(file);
             }
         }
         catch (Exception error)

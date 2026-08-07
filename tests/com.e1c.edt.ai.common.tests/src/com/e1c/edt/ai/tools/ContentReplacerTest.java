@@ -581,6 +581,135 @@ public class ContentReplacerTest
     }
 
     @Test
+    public void testNotFoundHintPointsToClosestLine()
+    {
+        ContentReplacer replacer = createContentReplacer();
+        // The model assumes two chained `.Singleton<>()` calls; the file actually has one combined call.
+        String currentContent = "builder\n"
+            + "    .Root<IFoo>()\n"
+            + "    .Singleton<JsonSerializerWrapper, GitHubMatrixDataSource, MatrixView, MatrixScoring>();\n";
+        String originContent = "    .Singleton<GitHubMatrixDataSource, MatrixView, MatrixScoring>()\n"
+            + "    .Singleton<IJsonSerializer, JsonSerializerWrapper>();";
+        String newContent = "irrelevant";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, "\n", false);
+
+        assertFalse("Replacement should fail: no such text exists", result.isSuccess());
+        String hint = result.getNearestMatchHint();
+        assertTrue("Hint should be present for a sufficiently similar line", hint != null && !hint.isBlank());
+        assertTrue("Hint should point at line 3, the actual combined Singleton<> call",
+            hint.contains("3: ") && hint.contains("GitHubMatrixDataSource"));
+    }
+
+    @Test
+    public void testNotFoundHintAbsentWhenNoSimilarLineExists()
+    {
+        ContentReplacer replacer = createContentReplacer();
+        String currentContent = "Line1\nLine2\nLine3";
+        String originContent = "Something completely unrelated to any line here";
+        String newContent = "NewContent";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, "\n", false);
+
+        assertFalse("Replacement should fail", result.isSuccess());
+        assertTrue("No hint should be offered when nothing resembles old_content",
+            result.getNearestMatchHint() == null);
+    }
+
+    @Test
+    public void testEscapeNormalizedMatchSucceedsWithOverEscapedOldContent()
+    {
+        // The file has a real newline; the model over-escaped it as a literal backslash-n, as if
+        // copying a JSON-encoded string without decoding it first.
+        ContentReplacer replacer = createContentReplacer();
+        String currentContent = "Hello\nWorld";
+        String originContent = "Hello\\nWorld";
+        // new_content is never escape-normalized - it is inserted verbatim - so a real newline here
+        // lands as a real newline, independently of how old_content was (mis)escaped.
+        String newContent = "Hi\nEarth";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, "\n", false);
+
+        assertTrue("EscapeNormalizedReplacer should reconcile the over-escaped old_content", result.isSuccess());
+        assertEquals("Hi\nEarth", result.getUpdatedContent());
+    }
+
+    @Test
+    public void testReplaceInSingleLineWithMultipleLiteralEscapeSequences()
+    {
+        // Mirrors a real C# constant: one physical line whose *content* contains several literal
+        // `\n` escape sequences (two characters each: backslash + n), not actual newlines.
+        ContentReplacer replacer = createContentReplacer();
+        String currentContent =
+            "public const string WriteCsv = \"Id,Name\\n1,Ada\\n2,Grace\\n3,Linus\\n\";\n";
+        String originContent = "\"Id,Name\\n1,Ada\\n2,Grace\\n3,Linus\\n\"";
+        String newContent = "\"Id,Name\\n1,Ada\\n2,Grace\\n3,Linus\\n4,Bob\\n\"";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, "\n", false);
+
+        assertTrue("Exact literal match on a line containing escape sequences should succeed", result.isSuccess());
+        assertEquals(
+            "public const string WriteCsv = \"Id,Name\\n1,Ada\\n2,Grace\\n3,Linus\\n4,Bob\\n\";\n",
+            result.getUpdatedContent());
+    }
+
+    @Test
+    public void testNotFoundHintWithEscapeSequencesInLine()
+    {
+        // Same line as above, but old_content has a typo ("Line" instead of "Linus") so it must fail -
+        // and the hint must still surface the real line intact despite its embedded `\n` sequences.
+        ContentReplacer replacer = createContentReplacer();
+        String currentContent =
+            "public const string WriteCsv = \"Id,Name\\n1,Ada\\n2,Grace\\n3,Linus\\n\";\n";
+        String originContent = "\"Id,Name\\n1,Ada\\n2,Grace\\n3,Line\\n\"";
+        String newContent = "irrelevant";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, "\n", false);
+
+        assertFalse("Typo'd old_content should not match", result.isSuccess());
+        String hint = result.getNearestMatchHint();
+        assertTrue("A hint should still be produced despite embedded escape sequences",
+            hint != null && !hint.isBlank());
+        assertTrue("Hint should contain the real, correctly-escaped line",
+            hint.contains("Linus") && hint.contains("WriteCsv"));
+    }
+
+    @Test(timeout = 5000)
+    public void testWhitespaceOnlyOldContentDoesNotHang()
+    {
+        // Regression test: a whitespace-only old_content trims to "" in TrimmedBoundaryReplacer,
+        // which used to be treated as a valid zero-length "candidate". String.indexOf("", n) never
+        // returns -1, so the occurrence-scanning loop in ContentReplacer.findReplacement span every
+        // position of the file forever. The JUnit timeout catches a regression; the assertion below
+        // just documents the expected (harmless failure) outcome once it no longer hangs.
+        ContentReplacer replacer = createContentReplacer();
+        String currentContent = "a\n\nb\n\nc";
+        String originContent = "   ";
+        String newContent = "x";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, "\n", false);
+
+        assertFalse("A whitespace-only old_content should not match real content", result.isSuccess());
+    }
+
+    @Test
+    public void testNotFoundHintAbsentForGenericShortAnchor()
+    {
+        ContentReplacer replacer = createContentReplacer();
+        // No brace at all, so the search result is a genuine not-found (not an ambiguous multi-match).
+        String currentContent = "if (x)\n    DoSomething();\nelse\n    DoOther();";
+        // Too short/generic to be a reliable anchor - must not produce a misleading hint.
+        String originContent = "}";
+        String newContent = "irrelevant";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, "\n", false);
+
+        assertFalse("Replacement should fail", result.isSuccess());
+        assertTrue("No hint should be offered for a too-generic anchor",
+            result.getNearestMatchHint() == null);
+    }
+
+    @Test
     public void testReplaceWithCyrillicCharacters()
     {
         ContentReplacer replacer = createContentReplacer();

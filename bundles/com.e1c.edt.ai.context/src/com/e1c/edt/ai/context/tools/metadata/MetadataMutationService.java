@@ -5,6 +5,8 @@ package com.e1c.edt.ai.context.tools.metadata;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,6 +43,9 @@ import com._1c.g5.v8.dt.form.generator.IFormFieldGenerator;
 import com._1c.g5.v8.dt.form.generator.IFormGenerator;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.form.model.FormFactory;
+import com._1c.g5.v8.dt.mcore.McoreFactory;
+import com._1c.g5.v8.dt.mcore.TypeDescription;
+import com._1c.g5.v8.dt.mcore.util.McoreUtil;
 import com._1c.g5.v8.dt.md.model.IMdObjectInitializer;
 import com._1c.g5.v8.dt.md.refactoring.core.IMdRefactoringService;
 import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegister;
@@ -57,8 +62,11 @@ import com._1c.g5.v8.dt.metadata.mdclass.MdClassFactory;
 import com._1c.g5.v8.dt.metadata.mdclass.MdObject;
 import com._1c.g5.v8.dt.metadata.mdclass.MdClassPackage;
 import com._1c.g5.v8.dt.metadata.mdclass.Report;
+import com._1c.g5.v8.dt.metadata.mdclass.ScheduledJob;
 import com._1c.g5.v8.dt.metadata.mdclass.Template;
 import com._1c.g5.v8.dt.metadata.mdclass.TemplateType;
+import com._1c.g5.v8.dt.platform.IEObjectTypeNames;
+import com._1c.g5.v8.dt.schedule.model.ScheduleFactory;
 import com._1c.g5.v8.dt.moxel.sheet.SheetFactory;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IEditingSupport;
@@ -90,7 +98,9 @@ final class MetadataMutationService
     private final IFormFieldGenerator formFieldGenerator;
     private final IEditingLanguageManager editingLanguageManager;
     private final IProjectFileSystemSupportProvider fileSystemSupportProvider;
+    private final FormMutationService formService;
     private final java.util.Set<com.e1c.edt.ai.IMarkersProvider> markersProviders;
+    private final FormLoadValidator loadValidator;
 
     @Inject
     MetadataMutationService(IBmModelManager modelManager, ITopObjectFqnGenerator fqnGenerator,
@@ -98,8 +108,11 @@ final class MetadataMutationService
         IProjectBuilder projectBuilder, IDerivedDataManagerProvider derivedDataManagerProvider, ISettings settings,
         IV8ProjectManager v8ProjectManager, IFormGenerator formGenerator, IFormFieldGenerator formFieldGenerator,
         IEditingLanguageManager editingLanguageManager, IProjectFileSystemSupportProvider fileSystemSupportProvider,
-        java.util.Set<com.e1c.edt.ai.IMarkersProvider> markersProviders)
+        FormMutationService formService, java.util.Set<com.e1c.edt.ai.IMarkersProvider> markersProviders,
+        FormLoadValidator loadValidator)
     {
+        Preconditions.checkNotNull(formService);
+        this.formService = formService;
         Preconditions.checkNotNull(markersProviders);
         this.markersProviders = markersProviders;
         Preconditions.checkNotNull(modelManager);
@@ -115,6 +128,7 @@ final class MetadataMutationService
         Preconditions.checkNotNull(formFieldGenerator);
         Preconditions.checkNotNull(editingLanguageManager);
         Preconditions.checkNotNull(fileSystemSupportProvider);
+        Preconditions.checkNotNull(loadValidator);
         this.modelManager = modelManager;
         this.fqnGenerator = fqnGenerator;
         this.editingSupport = editingSupport;
@@ -128,6 +142,7 @@ final class MetadataMutationService
         this.formFieldGenerator = formFieldGenerator;
         this.editingLanguageManager = editingLanguageManager;
         this.fileSystemSupportProvider = fileSystemSupportProvider;
+        this.loadValidator = loadValidator;
     }
 
     synchronized MetadataResponse execute(MetadataRequest request, ICancellationToken cancellationToken)
@@ -148,6 +163,13 @@ final class MetadataMutationService
         {
             return inspectObject(project, request);
         }
+        if ("inspectForm".equals(request.operation)) //$NON-NLS-1$
+        {
+            var inspected = formService.execute(project, request);
+            inspected.resourcePath = formBodyPath(project, request.objectName);
+            inspected.markerPath = inspected.resourcePath;
+            return inspected;
+        }
         if ("listModules".equals(request.operation)) //$NON-NLS-1$
         {
             return listModules(project, request);
@@ -165,6 +187,15 @@ final class MetadataMutationService
         requireEditable(project, request);
 
         MetadataResponse response;
+        if (FormMutationService.OPERATIONS.contains(request.operation))
+        {
+            response = formService.execute(project, request);
+            // A form operation changes the external Form.form body, not the owner .mdo, so the resource
+            // to wait for and to read markers from is that body file.
+            response.resourcePath = formBodyPath(project, request.objectName);
+            response.markerPath = response.resourcePath;
+            return finish(project, request, response, cancellationToken);
+        }
         switch (request.operation)
         {
         case "createObject": //$NON-NLS-1$
@@ -172,6 +203,9 @@ final class MetadataMutationService
             break;
         case "setObjectProperty": //$NON-NLS-1$
             response = setObjectProperty(project, request);
+            break;
+        case "setScheduledJobSchedule": //$NON-NLS-1$
+            response = setScheduledJobSchedule(project, request);
             break;
         case "renameObject": //$NON-NLS-1$
             response = renameObject(project, request);
@@ -254,7 +288,16 @@ final class MetadataMutationService
         response.resourcePath = metadataResourcePath(project, response.target);
         response.markerPath = response.resourcePath;
         response.artifactPath = artifactPath(project, request);
+        return finish(project, request, response, cancellationToken);
+    }
 
+    /**
+     * Shared tail of every mutation: wait for EDT to persist, run validation, and attach the marker
+     * self-check. Split out because form operations resolve their own resource path first.
+     */
+    private MetadataResponse finish(IProject project, MetadataRequest request, MetadataResponse response,
+        ICancellationToken cancellationToken)
+    {
         checkCanceled(cancellationToken);
         if (response.changed && !request.dryRun)
         {
@@ -528,6 +571,13 @@ final class MetadataMutationService
         result.put("name", object.getName()); //$NON-NLS-1$
         result.put("synonym", object.getSynonym().get("ru")); //$NON-NLS-1$ //$NON-NLS-2$
         result.put("properties", scalarProperties(object)); //$NON-NLS-1$
+        // Only explicitly set properties are listed, to keep the response small. Without saying so, a
+        // missing execution-context flag of a common module reads as "unknown" instead of "false", and
+        // the model has to guess what setObjectProperty would actually change.
+        result.put("properties_note", "Only explicitly set properties are listed. A scalar property that" //$NON-NLS-1$ //$NON-NLS-2$
+            + " is absent holds its 1C default: false for a flag, empty for a string. Valid property" //$NON-NLS-1$
+            + " names are reported by setObjectProperty when it rejects one."); //$NON-NLS-1$
+        result.put("references", singleReferences(object)); //$NON-NLS-1$
         var children = new LinkedHashMap<String, Object>();
         for (var featureName : List.of("attributes", "tabularSections", "enumValues", "dimensions", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             "resources", "forms", "templates")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
@@ -626,6 +676,63 @@ final class MetadataMutationService
         return result;
     }
 
+    /**
+     * Single-valued reference properties and what they currently point at, as FQNs.
+     * <p>
+     * These are exactly the properties {@code setObjectProperty} can assign by FQN ({@code defaultForm},
+     * {@code defaultObjectForm}, {@code task}, {@code chartOfCalculationTypes}, ...). They are not scalars,
+     * so without this the model could not see whether a form had become the owner's default and concluded
+     * it had not.
+     */
+    private static Map<String, Object> singleReferences(MdObject object)
+    {
+        var result = new LinkedHashMap<String, Object>();
+        for (var feature : object.eClass().getEAllStructuralFeatures())
+        {
+            if (!isSingleReference(feature) || !object.eIsSet(feature))
+            {
+                continue;
+            }
+            var value = object.eGet(feature);
+            if (value instanceof MdObject)
+            {
+                result.put(feature.getName(), referenceFqn((MdObject)value));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * The 1C FQN of a referenced object, in the form the operations here accept back as
+     * {@code object_name}.
+     * <p>
+     * A nested object is addressed by its collection, not by its EDT class: the form
+     * {@code ФормаЭлемента} of a catalog is {@code Catalog.X.Form.ФормаЭлемента}, never
+     * {@code Catalog.X.CatalogForm.ФормаЭлемента}, and the collection name ({@code forms},
+     * {@code templates}, {@code attributes}, ...) singularizes straight onto that segment.
+     */
+    private static String referenceFqn(MdObject target)
+    {
+        var container = target.eContainer();
+        if (!(container instanceof MdObject))
+        {
+            return target.eClass().getName() + "." + target.getName(); //$NON-NLS-1$
+        }
+        var owner = (MdObject)container;
+        var ownerFqn = owner instanceof Configuration ? "Configuration" //$NON-NLS-1$
+            : owner.eClass().getName() + "." + owner.getName(); //$NON-NLS-1$
+        var collection = target.eContainmentFeature();
+        var segment = collection != null ? singular(collection.getName()) : target.eClass().getName();
+        return ownerFqn + "." + segment + "." + target.getName(); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private static String singular(String collectionName)
+    {
+        var name = collectionName.endsWith("s") //$NON-NLS-1$
+            ? collectionName.substring(0, collectionName.length() - 1) : collectionName;
+        return Character.toUpperCase(name.charAt(0)) + name.substring(1);
+    }
+
     private MetadataResponse setChildProperty(IProject project, MetadataRequest request)
     {
         if ("name".equalsIgnoreCase(request.propertyName)) //$NON-NLS-1$
@@ -642,27 +749,19 @@ final class MetadataMutationService
                 + " length, precision or date_fractions. For example type=String and length=50."); //$NON-NLS-1$
         }
         boolean[] changed = { false };
+        var details = new LinkedHashMap<String, Object>();
         model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Set 1C metadata child property") //$NON-NLS-1$
         {
             @Override
             public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
             {
-                var child = requireChild(transaction, request);
-                if ("synonym".equalsIgnoreCase(request.propertyName)) //$NON-NLS-1$
-                {
-                    var old = child.getSynonym().get("ru"); //$NON-NLS-1$
-                    changed[0] = !java.util.Objects.equals(old, request.propertyValue);
-                    if (changed[0] && !request.dryRun)
-                    {
-                        child.getSynonym().put("ru", request.propertyValue); //$NON-NLS-1$
-                    }
-                    return null;
-                }
-                changed[0] = setScalarProperty(child, request.propertyName, request.propertyValue, request.dryRun);
+                changed[0] = MetadataPropertyWriter.set(requireChild(transaction, request), request, details);
                 return null;
             }
         });
-        return MetadataResponse.success(request, childTarget(request), changed[0]);
+        var response = MetadataResponse.success(request, childTarget(request), changed[0]);
+        response.details = details;
+        return response;
     }
 
     private MetadataResponse setChildType(IProject project, MetadataRequest request)
@@ -683,11 +782,50 @@ final class MetadataMutationService
                 if (changed[0] && !request.dryRun)
                 {
                     ((BasicFeature)child).setType(newType);
+                    resetTypeDependentValues(child, newType);
+                    MetadataStructuralValidator.requireSound(child);
                 }
                 return null;
             }
         });
         return MetadataResponse.success(request, childTarget(request), changed[0]);
+    }
+
+    /**
+     * Resets fill/min/max value after a type change, mirroring EDT's own {@code ChangeTypeDescriptionTask}
+     * (the mechanism its Properties-view type editor uses). Left alone, a stale value set for the
+     * field's previous type — for example the empty {@code StringValue} every register-field initializer
+     * seeds a brand new dimension/resource with, before this tool overwrites the type to a reference —
+     * crashes the Properties view with a {@code ClassCastException} the first time a human opens it:
+     * {@code MdPropertyPaletteComponent} expects a value class matching the type it is about to render,
+     * and 1C's own marker checker does not validate that correspondence, so the mutation itself reports
+     * zero markers. {@code fillValue} is always reset; {@code minValue}/{@code maxValue} only when the
+     * new type is not Number, matching the official task exactly.
+     */
+    private static void resetTypeDependentValues(EObject object, TypeDescription newType)
+    {
+        setFeatureValueIfPresent(object, "fillValue", McoreFactory.eINSTANCE.createUndefinedValue()); //$NON-NLS-1$
+        if (!hasNumberType(newType))
+        {
+            setFeatureValueIfPresent(object, "maxValue", McoreFactory.eINSTANCE.createUndefinedValue()); //$NON-NLS-1$
+            setFeatureValueIfPresent(object, "minValue", McoreFactory.eINSTANCE.createUndefinedValue()); //$NON-NLS-1$
+        }
+    }
+
+    private static void setFeatureValueIfPresent(EObject object, String featureName, Object newValue)
+    {
+        var feature = object.eClass().getEStructuralFeature(featureName);
+        if (feature != null && !feature.isMany())
+        {
+            object.eSet(feature, newValue);
+        }
+    }
+
+    private static boolean hasNumberType(TypeDescription type)
+    {
+        return type != null && type.getTypes().stream()
+            .map(McoreUtil::getTypeName)
+            .anyMatch(name -> java.util.Objects.equals(name, IEObjectTypeNames.NUMBER));
     }
 
     private MetadataResponse renameChild(IProject project, MetadataRequest request)
@@ -926,16 +1064,24 @@ final class MetadataMutationService
     private MetadataResponse createObjectForm(IProject project, MetadataRequest request)
     {
         validateIdentifier(request.name, "name"); //$NON-NLS-1$
-        final FormType formType;
+        FormType requestedType;
         try
         {
-            formType = FormType.valueOf(request.formType.toUpperCase(Locale.ROOT));
+            requestedType = FormType.valueOf(request.formType.toUpperCase(Locale.ROOT));
         }
         catch (RuntimeException e)
         {
             throw new ToolException("Invalid `form_type`. Valid values: " + formTypeNames() + "."); //$NON-NLS-1$ //$NON-NLS-2$
         }
+        // A report and an external report have no "object form": EDT generates their main form as
+        // REPORT. The model reliably asks for OBJECT there, so translate instead of failing.
+        var ownerType = objectParts(request.objectName)[0];
+        final FormType formType = requestedType == FormType.OBJECT
+            && ("Report".equals(ownerType) || "ExternalReport".equals(ownerType)) //$NON-NLS-1$ //$NON-NLS-2$
+                ? FormType.REPORT : requestedType;
         boolean[] changed = { false };
+        var warnings = new java.util.ArrayList<String>();
+        Form[] createdForm = { null };
         model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Create generated 1C object form") //$NON-NLS-1$
         {
             @Override
@@ -960,9 +1106,12 @@ final class MetadataMutationService
                 var formMetadata = (BasicForm)created;
                 formMetadata.setName(request.name);
                 formMetadata.setUuid(UUID.randomUUID());
+                // Without an explicit kind the metadata defaults to an ordinary (8.1) form, which the
+                // managed-form generator cannot fill and EDT then reports as a broken form.
+                formMetadata.setFormType(com._1c.g5.v8.dt.metadata.mdclass.FormType.MANAGED);
                 if (request.title != null && !request.title.isBlank())
                 {
-                    formMetadata.getSynonym().put("ru", request.title); //$NON-NLS-1$
+                    formMetadata.getSynonym().put(MetadataPropertyWriter.DEFAULT_LANGUAGE_CODE, request.title);
                 }
                 changed[0] = true;
                 if (request.dryRun)
@@ -970,17 +1119,61 @@ final class MetadataMutationService
                     return null;
                 }
                 forms.add(formMetadata);
-                var v8Project = v8ProjectManager.getProject(project);
-                if (v8Project == null)
+                Form form;
+                if (formType == FormType.GENERIC)
                 {
-                    throw new ToolException("V8 project is not available: " + project.getName()); //$NON-NLS-1$
+                    // A generic form intentionally has no generated layout: callers build its attributes,
+                    // commands, and items through the declarative form operations. Creating its body directly
+                    // also keeps this operation compatible with EDT installations whose IFormGenerator service
+                    // has a different binary signature than the version used to compile this bundle.
+                    form = FormFactory.eINSTANCE.createForm();
+                    // Form.commandInterface is a mandatory singleton EDT's own generator always populates;
+                    // left unset here it crashes FormCommandInterfaceMapping (and any UI that loads the
+                    // form's command bar) with a raw NullPointerException the first time a human opens it.
+                    form.setCommandInterface(FormFactory.eINSTANCE.createFormCommandInterface());
+                    // Unlike OBJECT/RECORD/RECORD_SET, GENERIC skips EDT's generator entirely, so there is no
+                    // main "Объект"-style attribute yet. addFormField then fails on Объект.<Name> with a raw
+                    // EDT NullPointerException until that attribute is added by hand; said here up front, it
+                    // is cheaper than discovering it after a failed addFormField.
+                    warnings.add("This GENERIC form starts completely empty: it has no main object attribute" //$NON-NLS-1$
+                        + " the way OBJECT/RECORD/RECORD_SET forms do. To bind fields to the owner's own" //$NON-NLS-1$
+                        + " attributes (for example Объект.Комментарий), first add that attribute yourself, for" //$NON-NLS-1$
+                        + " example addFormAttribute name=Объект type=" + ownerType + "Object." + owner.getName() //$NON-NLS-1$ //$NON-NLS-2$
+                        + " main=true (use the produced type this owner actually has — inspectObject or help" //$NON-NLS-1$
+                        + " topic=objectTypes shows it — for example RecordSet instead of Object for a" //$NON-NLS-1$
+                        + " register)."); //$NON-NLS-1$
                 }
-                var scriptVariant = v8Project.getScriptVariant();
-                var version = v8Project.getVersion();
-                var languageCode = editingLanguageManager.getEditingLanguageCode(project);
-                var rootField = formFieldGenerator.getFormGeneratorFields(owner, formType, scriptVariant, version);
-                Form form = formGenerator.generateForm(owner, formMetadata, formType, scriptVariant,
-                    languageCode, version, rootField, Integer.valueOf(1));
+                else
+                {
+                    var v8Project = v8ProjectManager.getProject(project);
+                    if (v8Project == null)
+                    {
+                        throw new ToolException("V8 project is not available: " + project.getName()); //$NON-NLS-1$
+                    }
+                    var scriptVariant = v8Project.getScriptVariant();
+                    var version = v8Project.getVersion();
+                    var languageCode = editingLanguageManager.getEditingLanguageCode(project);
+                    var rootField = generatorFields(owner, formType, scriptVariant, version);
+                    try
+                    {
+                        form = invokeGenerateForm(owner, formMetadata, formType, scriptVariant, languageCode, version,
+                            rootField);
+                    }
+                    catch (RuntimeException | LinkageError e)
+                    {
+                        throw new ToolException("EDT could not generate a " + formType.name() + " form for " //$NON-NLS-1$ //$NON-NLS-2$
+                            + request.objectName + ": " + rootCause(e) //$NON-NLS-1$
+                            + ". Check that form_type matches the owner (a report and a data processor take" //$NON-NLS-1$
+                            + " REPORT or GENERIC, a register takes RECORD_SET or LIST), and that the owner's" //$NON-NLS-1$
+                            + " attributes are valid. For an empty form that will be assembled with addForm*" //$NON-NLS-1$
+                            + " operations, use form_type GENERIC.", e, ToolErrorType.USER_VISIBLE); //$NON-NLS-1$
+                    }
+                }
+                if (form == null)
+                {
+                    throw new ToolException("EDT generated no form body for " + request.objectName + "." //$NON-NLS-1$ //$NON-NLS-2$
+                        + request.name + " with form_type " + formType.name() + "."); //$NON-NLS-1$ //$NON-NLS-2$
+                }
                 formMetadata.setForm(form);
                 form.setMdForm(formMetadata);
                 var formReference = (org.eclipse.emf.ecore.EReference)formMetadata.eClass()
@@ -988,10 +1181,67 @@ final class MetadataMutationService
                 var formFqn = fqnGenerator.generateExternalPropertyFqn(formMetadata, formReference);
                 transaction.attachTopObject((IBmObject)form, formFqn);
                 setDefaultForm(owner, formMetadata, formType);
+                MetadataStructuralValidator.requireSound(form);
+                createdForm[0] = form;
                 return null;
             }
         });
-        return MetadataResponse.success(request, request.objectName + "." + request.name, changed[0]); //$NON-NLS-1$
+        // Deliberately after the transaction above has committed: see FormLoadValidator's class comment
+        // for why joining its BM-transaction-opening Job from inside a still-open write transaction risks
+        // a deadlock.
+        if (createdForm[0] != null)
+        {
+            warnings.addAll(loadValidator.findLoadErrors(createdForm[0]));
+        }
+        var response = MetadataResponse.success(request, request.objectName + "." + request.name, changed[0]); //$NON-NLS-1$
+        response.warnings.addAll(warnings);
+        return response;
+    }
+
+    /**
+     * Root {@link com._1c.g5.v8.dt.form.generator.FormFieldInfo} handed to the generator.
+     * <p>
+     * The field generator is per form type: for the types it does not describe it answers with a bare
+     * root, and for an arbitrary (GENERIC) form the fields it proposes must not be laid out at all —
+     * that form is meant to start empty. It may also answer {@code null}, while
+     * {@code IFormGenerator.generateForm} documents {@code rootField} as mandatory, so an empty root is
+     * substituted rather than letting the generator fail with a bare NPE.
+     */
+    private com._1c.g5.v8.dt.form.generator.FormFieldInfo generatorFields(MdObject owner, FormType formType,
+        com._1c.g5.v8.dt.metadata.mdclass.ScriptVariant scriptVariant,
+        com._1c.g5.v8.dt.platform.version.Version version)
+    {
+        com._1c.g5.v8.dt.form.generator.FormFieldInfo rootField;
+        try
+        {
+            rootField = formFieldGenerator.getFormGeneratorFields(owner, formType, scriptVariant, version);
+        }
+        catch (RuntimeException e)
+        {
+            throw new ToolException("EDT could not collect the generator fields of " + owner.getName() //$NON-NLS-1$
+                + " for form_type " + formType.name() + ": " + rootCause(e) //$NON-NLS-1$ //$NON-NLS-2$
+                + ". The owner's attributes or types are probably incomplete.", e, ToolErrorType.USER_VISIBLE); //$NON-NLS-1$
+        }
+        if (rootField == null)
+        {
+            return new com._1c.g5.v8.dt.form.generator.FormFieldInfo("", true, null, null, false); //$NON-NLS-1$
+        }
+        if (formType == FormType.GENERIC)
+        {
+            rootField.getChildren().clear();
+        }
+        return rootField;
+    }
+
+    private static String rootCause(Throwable error)
+    {
+        var current = error;
+        while (current.getCause() != null && current.getCause() != current)
+        {
+            current = current.getCause();
+        }
+        return current.getClass().getSimpleName()
+            + (current.getMessage() == null ? "" : ": " + current.getMessage()); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     /** Comma-separated list of every generated form type EDT supports. */
@@ -1016,7 +1266,12 @@ final class MetadataMutationService
     private static Map<FormType, List<String>> createDefaultFormFeatures()
     {
         Map<FormType, List<String>> result = new LinkedHashMap<>();
-        result.put(FormType.OBJECT, List.of("defaultObjectForm"));
+        // "defaultForm" trails the specific slots on purpose: a catalog has defaultObjectForm and no
+        // defaultForm, while a data processor has only defaultForm and calls that its main form.
+        result.put(FormType.OBJECT, List.of("defaultObjectForm", "defaultForm"));
+        // An arbitrary form is nobody's default on a catalog-like owner (which has no such slot), but on
+        // a data processor or a report it is exactly what "основная форма" means.
+        result.put(FormType.GENERIC, List.of("defaultForm"));
         result.put(FormType.FOLDER, List.of("defaultFolderForm"));
         result.put(FormType.LIST, List.of("defaultListForm"));
         result.put(FormType.CHOICE, List.of("defaultChoiceForm"));
@@ -1034,7 +1289,6 @@ final class MetadataMutationService
         result.put(FormType.CHANGE_HISTORY, List.of("defaultDataHistoryChangeHistoryForm"));
         result.put(FormType.VERSION_DATA, List.of("defaultDataHistoryVersionDataForm"));
         result.put(FormType.VERSION_DIFFERENCES, List.of("defaultDataHistoryVersionDifferencesForm"));
-        // GENERIC is an arbitrary form: it is never anybody's default.
         return result;
     }
 
@@ -1248,11 +1502,73 @@ final class MetadataMutationService
                 {
                     transaction.detachTopObject((IBmObject)body);
                 }
+                clearOwnerReferences(owner, child);
                 EcoreUtil.delete(child, true);
                 return null;
             }
         });
+        if (changed[0] && !request.dryRun)
+        {
+            deleteArtifactFolder(project, request, collection);
+        }
         return MetadataResponse.success(request, request.objectName + "." + request.name, changed[0]); //$NON-NLS-1$
+    }
+
+    /**
+     * Drops every non-containment reference the owner holds to a child being deleted.
+     * <p>
+     * {@code EcoreUtil.delete} clears cross-references by scanning the child's {@link org.eclipse.emf
+     * .ecore.resource.Resource}, and a BM object has none, so it silently removes the child from its
+     * collection and leaves the rest. For a form that means the owner keeps
+     * {@code <defaultObjectForm>} pointing at metadata that no longer exists — a dangling reference
+     * written straight into the {@code .mdo}.
+     */
+    private static void clearOwnerReferences(MdObject owner, EObject child)
+    {
+        for (var reference : owner.eClass().getEAllReferences())
+        {
+            if (reference.isContainment() || reference.isDerived() || !reference.isChangeable())
+            {
+                continue;
+            }
+            if (reference.isMany())
+            {
+                ((Collection<?>)owner.eGet(reference)).remove(child);
+            }
+            else if (owner.eGet(reference) == child)
+            {
+                owner.eUnset(reference);
+            }
+        }
+    }
+
+    /**
+     * Removes what is left of the artifact folder on disk.
+     * <p>
+     * BM owns the {@code .mdo} entry and the generated body, but not the files written next to them —
+     * a form module above all. Left behind, they keep the folder alive as a module belonging to a form
+     * that no longer exists, and the persistence check then reports the removal as unfinished even
+     * though the metadata itself went away.
+     */
+    private void deleteArtifactFolder(IProject project, MetadataRequest request, String collection)
+    {
+        var folderName = "forms".equals(collection) ? "Forms" : "Templates"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        var folder = project.getFolder(
+            metadataOwnerFolder(request.objectName) + "/" + folderName + "/" + request.name); //$NON-NLS-1$ //$NON-NLS-2$
+        try
+        {
+            folder.refreshLocal(IResource.DEPTH_INFINITE, new NullProgressMonitor());
+            if (folder.exists())
+            {
+                folder.delete(true, new NullProgressMonitor());
+            }
+        }
+        catch (org.eclipse.core.runtime.CoreException e)
+        {
+            throw new ToolException("The metadata was removed, but its folder could not be deleted: " //$NON-NLS-1$
+                + folder.getFullPath() + " (" + e.getMessage() //$NON-NLS-1$
+                + "). Delete the leftover files there before continuing.", e, ToolErrorType.USER_VISIBLE); //$NON-NLS-1$
+        }
     }
 
     private MetadataResponse createObject(IProject project, MetadataRequest request)
@@ -1261,6 +1577,7 @@ final class MetadataMutationService
         validateIdentifier(name, "object_name"); //$NON-NLS-1$
         var model = model(project);
         boolean[] changed = { false };
+        Form[] createdForm = { null };
         model.getGlobalContext().execute(new AbstractBmTask<Void>("Create 1C metadata object") //$NON-NLS-1$
         {
             @Override
@@ -1307,9 +1624,10 @@ final class MetadataMutationService
                     addToFeature(configuration, descriptor.collection, object);
                     if ("CommonForm".equals(descriptor.name)) //$NON-NLS-1$
                     {
-                        attachFormBody(project, transaction, (BasicForm)object);
+                        createdForm[0] = attachFormBody(project, transaction, (BasicForm)object);
                     }
                 }
+                MetadataStructuralValidator.requireSound(object);
                 changed[0] = true;
                 return null;
             }
@@ -1325,7 +1643,15 @@ final class MetadataMutationService
                 readObject(project, request.objectName);
             }
         }
-        return MetadataResponse.success(request, request.objectName, changed[0]);
+        var response = MetadataResponse.success(request, request.objectName, changed[0]);
+        // Deliberately after the transaction above has committed: see FormLoadValidator's class comment
+        // for why joining its BM-transaction-opening Job from inside a still-open write transaction risks
+        // a deadlock.
+        if (createdForm[0] != null)
+        {
+            response.warnings.addAll(loadValidator.findLoadErrors(createdForm[0]));
+        }
+        return response;
     }
 
     private static final String DEFAULT_PLATFORM_VERSION = "8.3.24"; //$NON-NLS-1$
@@ -1358,6 +1684,19 @@ final class MetadataMutationService
         var platformVersion = request.platformVersion != null && !request.platformVersion.isBlank()
             ? request.platformVersion : DEFAULT_PLATFORM_VERSION;
         var configurationMdo = configurationMdo(name, request, platformVersion);
+        if (request.dryRun)
+        {
+            // Creating a whole project is the least reversible operation here, so a dry run must stop
+            // once the parameters are known to be valid. Everything above only validates.
+            var preview = MetadataResponse.success(request, "Configuration", true); //$NON-NLS-1$
+            var details = new LinkedHashMap<String, Object>();
+            details.put("would_create_project", name); //$NON-NLS-1$
+            details.put("platform_version", platformVersion); //$NON-NLS-1$
+            details.put("location", //$NON-NLS-1$
+                workspace.getRoot().getLocation().append(name).toOSString());
+            preview.details = details;
+            return preview;
+        }
         try
         {
             var description = workspace.newProjectDescription(name);
@@ -2053,7 +2392,7 @@ final class MetadataMutationService
      * once the owner and the form, hence it is passed as both. Falls back to the bare body if generation
      * is unavailable, which is no worse than before.
      */
-    private void attachFormBody(IProject project, IBmTransaction transaction, BasicForm formMetadata)
+    private Form attachFormBody(IProject project, IBmTransaction transaction, BasicForm formMetadata)
     {
         try
         {
@@ -2066,14 +2405,15 @@ final class MetadataMutationService
                 var languageCode = editingLanguageManager.getEditingLanguageCode(project);
                 var rootField =
                     formFieldGenerator.getFormGeneratorFields(owner, FormType.GENERIC, scriptVariant, version);
-                Form generated = formGenerator.generateForm(owner, formMetadata, FormType.GENERIC, scriptVariant,
-                    languageCode, version, rootField, Integer.valueOf(1));
+                Form generated = invokeGenerateForm(owner, formMetadata, FormType.GENERIC, scriptVariant,
+                    languageCode, version, rootField);
                 if (generated != null)
                 {
                     formMetadata.setForm(generated);
                     generated.setMdForm(formMetadata);
                     attachFormResource(transaction, formMetadata, generated);
-                    return;
+                    MetadataStructuralValidator.requireSound(generated);
+                    return generated;
                 }
             }
         }
@@ -2081,7 +2421,7 @@ final class MetadataMutationService
         {
             // Generation unavailable for this form: fall through to the bare body below.
         }
-        attachEmptyFormBody(transaction, formMetadata);
+        return attachEmptyFormBody(transaction, formMetadata);
     }
 
     private void attachFormResource(IBmTransaction transaction, BasicForm formMetadata, Form form)
@@ -2091,14 +2431,18 @@ final class MetadataMutationService
             formReference));
     }
 
-    private void attachEmptyFormBody(IBmTransaction transaction, BasicForm formMetadata)
+    private Form attachEmptyFormBody(IBmTransaction transaction, BasicForm formMetadata)
     {
         Form form = FormFactory.eINSTANCE.createForm();
+        // See the matching comment in createObjectForm: commandInterface is mandatory and never implied.
+        form.setCommandInterface(FormFactory.eINSTANCE.createFormCommandInterface());
         formMetadata.setForm(form);
         form.setMdForm(formMetadata);
         var formReference = (org.eclipse.emf.ecore.EReference)formMetadata.eClass().getEStructuralFeature("form"); //$NON-NLS-1$
         var formFqn = fqnGenerator.generateExternalPropertyFqn(formMetadata, formReference);
         transaction.attachTopObject((IBmObject)form, formFqn);
+        MetadataStructuralValidator.requireSound(form);
+        return form;
     }
 
     private MetadataResponse setObjectProperty(IProject project, MetadataRequest request)
@@ -2109,23 +2453,13 @@ final class MetadataMutationService
         }
         var model = model(project);
         boolean[] changed = { false };
+        var details = new LinkedHashMap<String, Object>();
         model.getGlobalContext().execute(new AbstractBmTask<Void>("Set 1C metadata property") //$NON-NLS-1$
         {
             @Override
             public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
             {
                 var object = requireObject(transaction, request.objectName);
-                if ("synonym".equalsIgnoreCase(request.propertyName)) //$NON-NLS-1$
-                {
-                    var old = object.getSynonym().get("ru"); //$NON-NLS-1$
-                    changed[0] = !java.util.Objects.equals(old, request.propertyValue);
-                    if (changed[0] && !request.dryRun)
-                    {
-                        object.getSynonym().put("ru", request.propertyValue); //$NON-NLS-1$
-                    }
-                    return null;
-                }
-
                 var feature = object.eClass().getEStructuralFeature(request.propertyName);
                 // A single-valued reference property (BusinessProcess.task, CalculationRegister
                 // .chartOfCalculationTypes, ...) is mandatory for some object types, and leaving it unset
@@ -2146,26 +2480,83 @@ final class MetadataMutationService
                     }
                     return null;
                 }
-                if (feature == null || feature.isMany() || !(feature.getEType() instanceof EDataType))
+                if (feature != null && feature.isMany() && !MetadataPropertyWriter.isLocalized(feature))
                 {
-                    throw new ToolException("Unsupported property `" + request.propertyName //$NON-NLS-1$
-                        + "` for " + request.objectName + "." //$NON-NLS-1$ //$NON-NLS-2$
-                        + propertySuggestion(object, request.propertyName)
-                        + (feature != null && feature.isMany()
-                            ? " That property holds a collection: use addObjectReference/removeObjectReference." //$NON-NLS-1$
-                            : "") //$NON-NLS-1$
-                        + " Valid scalar properties: " + scalarPropertyNames(object) + "."); //$NON-NLS-1$ //$NON-NLS-2$
+                    throw new ToolException("Property `" + request.propertyName + "` of " + request.objectName //$NON-NLS-1$ //$NON-NLS-2$
+                        + " holds a collection: use addObjectReference/removeObjectReference."); //$NON-NLS-1$
                 }
-                var value = EcoreUtil.createFromString((EDataType)feature.getEType(), request.propertyValue);
-                changed[0] = !java.util.Objects.equals(object.eGet(feature), value);
-                if (changed[0] && !request.dryRun)
-                {
-                    object.eSet(feature, value);
-                }
+                changed[0] = MetadataPropertyWriter.set(object, request, details);
                 return null;
             }
         });
-        return MetadataResponse.success(request, request.objectName, changed[0]);
+        var response = MetadataResponse.success(request, request.objectName, changed[0]);
+        response.details = details;
+        return response;
+    }
+
+    private MetadataResponse setScheduledJobSchedule(IProject project, MetadataRequest request)
+    {
+        final LocalTime beginTime;
+        try
+        {
+            beginTime = LocalTime.parse(request.beginTime);
+        }
+        catch (RuntimeException e)
+        {
+            throw new ToolException("Invalid `begin_time` `" + request.beginTime //$NON-NLS-1$
+                + "`. Use 24-hour HH:mm, for example 07:00."); //$NON-NLS-1$
+        }
+        int days = request.daysRepeatPeriod == null ? 1 : request.daysRepeatPeriod.intValue();
+        if (days < 1)
+        {
+            throw new ToolException("`days_repeat_period` must be at least 1."); //$NON-NLS-1$
+        }
+        boolean[] changed = { false };
+        model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Set scheduled-job schedule") //$NON-NLS-1$
+        {
+            @Override
+            public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var object = requireObject(transaction, request.objectName);
+                if (!(object instanceof ScheduledJob))
+                {
+                    throw new ToolException("setScheduledJobSchedule requires object_name=ScheduledJob.Name."); //$NON-NLS-1$
+                }
+                var job = (ScheduledJob)object;
+                var current = job.getSchedule();
+                var time = java.util.Date.from(beginTime.atDate(java.time.LocalDate.of(1970, 1, 1))
+                    .toInstant(ZoneOffset.UTC));
+                if (current != null && current.getDaysRepeatPeriod() == days
+                    && time.equals(current.getBeginTime()))
+                {
+                    return null;
+                }
+                changed[0] = true;
+                if (request.dryRun)
+                {
+                    return null;
+                }
+                if (current instanceof IBmObject && ((IBmObject)current).bmIsTop()
+                    && ((IBmObject)current).bmGetNamespace() != null)
+                {
+                    transaction.detachTopObject((IBmObject)current);
+                }
+                var schedule = ScheduleFactory.eINSTANCE.createSchedule();
+                schedule.setBeginTime(time);
+                schedule.setDaysRepeatPeriod(days);
+                job.setSchedule(schedule);
+                var scheduleReference = (EReference)job.eClass().getEStructuralFeature("schedule"); //$NON-NLS-1$
+                var scheduleFqn = fqnGenerator.generateExternalPropertyFqn(job, scheduleReference);
+                transaction.attachTopObject((IBmObject)schedule, scheduleFqn);
+                return null;
+            }
+        });
+        var response = MetadataResponse.success(request, request.objectName, changed[0]);
+        var details = new LinkedHashMap<String, Object>();
+        details.put("begin_time", request.beginTime); //$NON-NLS-1$
+        details.put("days_repeat_period", Integer.valueOf(days)); //$NON-NLS-1$
+        response.details = details;
+        return response;
     }
 
     private MetadataResponse renameObject(IProject project, MetadataRequest request)
@@ -2290,12 +2681,15 @@ final class MetadataMutationService
                 }
                 if (child instanceof BasicFeature)
                 {
-                    ((BasicFeature)child).setType(typeService.create(project, transaction, request));
+                    var newType = typeService.create(project, transaction, request);
+                    ((BasicFeature)child).setType(newType);
+                    resetTypeDependentValues(child, newType);
                 }
                 changed[0] = true;
                 if (!request.dryRun)
                 {
                     list.add(child);
+                    MetadataStructuralValidator.requireSound(child);
                 }
                 return null;
             }
@@ -2399,6 +2793,94 @@ final class MetadataMutationService
         }
     }
 
+    /**
+     * Calls {@code IFormGenerator.generateForm} without binding to one fixed compile-time overload.
+     * <p>
+     * A newer EDT platform version added a trailing {@code InterfaceCompatibilityMode} parameter to this
+     * method and dropped the 8-argument overload entirely (observed as {@code NoSuchMethodError} at
+     * runtime against a bundle compiled against an older platform version — the same class of version
+     * skew documented on {@link FormLoadValidator}). This reflects over whatever {@code generateForm}
+     * overload the runtime's actual {@code formGenerator} implementation declares, matching the leading
+     * parameters this tool always knows how to supply and defaulting any further trailing ones.
+     */
+    private Form invokeGenerateForm(MdObject owner, BasicForm formMetadata, FormType formType,
+        com._1c.g5.v8.dt.metadata.mdclass.ScriptVariant scriptVariant, String languageCode,
+        com._1c.g5.v8.dt.platform.version.Version version, com._1c.g5.v8.dt.form.generator.FormFieldInfo rootField)
+    {
+        var knownTypes = new Class<?>[] { MdObject.class, BasicForm.class, FormType.class,
+            com._1c.g5.v8.dt.metadata.mdclass.ScriptVariant.class, String.class,
+            com._1c.g5.v8.dt.platform.version.Version.class, com._1c.g5.v8.dt.form.generator.FormFieldInfo.class,
+            Integer.class };
+        var knownArgs =
+            new Object[] { owner, formMetadata, formType, scriptVariant, languageCode, version, rootField,
+                Integer.valueOf(1) };
+        for (var method : formGenerator.getClass().getMethods())
+        {
+            if (!"generateForm".equals(method.getName())) //$NON-NLS-1$
+            {
+                continue;
+            }
+            var parameterTypes = method.getParameterTypes();
+            if (parameterTypes.length < knownTypes.length || !matchesPrefix(parameterTypes, knownTypes))
+            {
+                continue;
+            }
+            var args = java.util.Arrays.copyOf(knownArgs, parameterTypes.length);
+            for (int i = knownTypes.length; i < parameterTypes.length; i++)
+            {
+                args[i] = defaultTrailingArgument(parameterTypes[i]);
+            }
+            try
+            {
+                method.setAccessible(true);
+                return (Form)method.invoke(formGenerator, args);
+            }
+            catch (ReflectiveOperationException e)
+            {
+                throw new ToolException("EDT's form generator rejected the call: " + rootCause(e), e, //$NON-NLS-1$
+                    ToolErrorType.USER_VISIBLE);
+            }
+        }
+        throw new ToolException("This EDT installation's form generator has no generateForm overload this tool" //$NON-NLS-1$
+            + " knows how to call."); //$NON-NLS-1$
+    }
+
+    private static boolean matchesPrefix(Class<?>[] parameterTypes, Class<?>[] knownTypes)
+    {
+        for (int i = 0; i < knownTypes.length; i++)
+        {
+            if (parameterTypes[i] != knownTypes[i])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Best-effort default for a trailing parameter a newer platform version added, that this tool has no
+     * explicit value for. An enum is assumed to be a configuration-level compatibility switch (matching
+     * {@code InterfaceCompatibilityMode}, the one observed so far): {@code TAXI} is what virtually every
+     * configuration on a currently supported platform version uses, so it is preferred by name; any other
+     * enum falls back to its first declared constant. Anything else defaults to {@code null}.
+     */
+    private static Object defaultTrailingArgument(Class<?> type)
+    {
+        if (!type.isEnum())
+        {
+            return null;
+        }
+        var constants = type.getEnumConstants();
+        for (var constant : constants)
+        {
+            if ("TAXI".equals(constant.toString())) //$NON-NLS-1$
+            {
+                return constant;
+            }
+        }
+        return constants.length > 0 ? constants[0] : null;
+    }
+
     private static IMdObjectInitializer<?> newInitializer(String className) throws ReflectiveOperationException
     {
         var instance = Class.forName(className).getDeclaredConstructor().newInstance();
@@ -2428,7 +2910,8 @@ final class MetadataMutationService
         field.set(initializer, mdTypeUtil);
     }
 
-    private static java.lang.reflect.Field findField(Class<?> type, String name)
+    /** Package-visible: {@link FormLoadValidator} reuses this to reach {@code Mapping}'s private job field. */
+    static java.lang.reflect.Field findField(Class<?> type, String name)
     {
         for (var current = type; current != null; current = current.getSuperclass())
         {
@@ -2597,13 +3080,6 @@ final class MetadataMutationService
         }
     }
 
-    /** Sorted names of an object's writable scalar properties, for helpful "unsupported property" errors. */
-    private static String scalarPropertyNames(EObject object)
-    {
-        var names = scalarPropertyNameSet(object);
-        return names.isEmpty() ? "(none)" : String.join(", ", names); //$NON-NLS-1$ //$NON-NLS-2$
-    }
-
     private static java.util.SortedSet<String> scalarPropertyNameSet(EObject object)
     {
         var names = new java.util.TreeSet<String>();
@@ -2639,25 +3115,6 @@ final class MetadataMutationService
             }
         }
         return matches.isEmpty() ? "" : " Did you mean: " + String.join(", ", matches) + "?"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-    }
-
-    private static boolean setScalarProperty(EObject object, String propertyName, String propertyValue,
-        boolean dryRun)
-    {
-        var feature = object.eClass().getEStructuralFeature(propertyName);
-        if (feature == null || feature.isMany() || !(feature.getEType() instanceof EDataType))
-        {
-            throw new ToolException("Unsupported scalar property `" + propertyName + "` for " //$NON-NLS-1$ //$NON-NLS-2$
-                + object.eClass().getName() + "." + propertySuggestion(object, propertyName) //$NON-NLS-1$
-                + " Valid scalar properties: " + scalarPropertyNames(object) + "."); //$NON-NLS-1$ //$NON-NLS-2$
-        }
-        var value = EcoreUtil.createFromString((EDataType)feature.getEType(), propertyValue);
-        boolean changed = !java.util.Objects.equals(object.eGet(feature), value);
-        if (changed && !dryRun)
-        {
-            object.eSet(feature, value);
-        }
-        return changed;
     }
 
     private static MdObject requireChild(IBmTransaction transaction, MetadataRequest request)
@@ -2737,6 +3194,38 @@ final class MetadataMutationService
             return Paths.get(base, "Templates", request.name).toString(); //$NON-NLS-1$
         }
         return null;
+    }
+
+    /**
+     * Absolute path of the {@code Form.form} body of {@code Type.Object.Form.Name}, or of
+     * {@code CommonForm.Name} whose body sits directly in the object folder.
+     */
+    private static String formBodyPath(IProject project, String formFqn)
+    {
+        return formFilePath(project, formFqn, "Form.form"); //$NON-NLS-1$
+    }
+
+    /** Absolute path of the form module, which is where a form command's handler procedure lives. */
+    static String formModulePath(IProject project, String formFqn)
+    {
+        return formFilePath(project, formFqn, "Module.bsl"); //$NON-NLS-1$
+    }
+
+    private static String formFilePath(IProject project, String formFqn, String fileName)
+    {
+        if (formFqn == null)
+        {
+            throw new ToolException("Parameter `object_name` is required and must be a form FQN."); //$NON-NLS-1$
+        }
+        int marker = formFqn.lastIndexOf(".Form."); //$NON-NLS-1$
+        if (marker < 0)
+        {
+            // CommonForm.Name and any other form that is a top-level object itself.
+            return Paths.get(project.getLocation().append(metadataOwnerFolder(formFqn)).toOSString(), fileName)
+                .toString();
+        }
+        var ownerFolder = project.getLocation().append(metadataOwnerFolder(formFqn.substring(0, marker))).toOSString();
+        return Paths.get(ownerFolder, "Forms", formFqn.substring(marker + ".Form.".length()), fileName).toString(); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     private static String metadataOwnerFolder(String target)

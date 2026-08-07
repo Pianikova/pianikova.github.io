@@ -31,13 +31,17 @@ public class GitCommitSkillContractTest
 
         var skill = read("SKILL.md");
 
-        assertTrue(skill.contains("allowed-tools: JGit Read"));
+        assertTrue(skill.contains("allowed-tools: JGit"));
+        assertFalse(skill.contains("allowed-tools: JGit Read"));
+        assertTrue(skill.contains("completion-marker: \"#END#\""));
+        assertTrue(skill.contains("reject-tool-like-json: true"));
         assertTrue(skill.contains("вызывай только `JGit`"));
         assertTrue(skill.contains("\"working_directory\": \"${working_directory}\""));
         assertTrue(skill.contains("[\"diff\", \"--cached\", \"--\", <не более трёх путей>]"));
         assertTrue(skill.contains("Пакеты из четырёх и более файлов запрещены"));
-        assertTrue(skill.contains("отправь все function calls одновременно"));
-        assertTrue(skill.contains("Не жди результат одного пакета"));
+        assertTrue(skill.contains("Параллельные вызовы"));
+        assertTrue(skill.contains("отправь все function calls одновременно в одном ответе"));
+        assertTrue(skill.contains("Не жди результат одного пакета перед вызовом следующего"));
         assertTrue(skill.contains("Не вызывай `TodoWrite`"));
         assertTrue(skill.contains("Вторая строка должна быть строго пустой"));
         assertTrue(skill.contains("Не добавляй после деталей"));

@@ -95,12 +95,13 @@ public final class EditMetadataMcpTool
             throw new ToolException("Cannot parse arguments as JSON object.", e, ToolErrorType.RETRYABLE); //$NON-NLS-1$
         }
 
+        normalizeCommonModelArguments(arguments);
         var validationErrors = registry.validate(arguments);
         if (!validationErrors.isEmpty())
         {
             throw new ToolException(String.join("\n", validationErrors)); //$NON-NLS-1$
         }
-        var request = json.deserialize(call.function.arguments, MetadataRequest.class)
+        var request = json.deserialize(arguments.toString(), MetadataRequest.class)
             .orElseThrow(() -> new ToolException("Cannot deserialize metadata operation arguments.")); //$NON-NLS-1$
 
         // Run on a single-threaded FIFO executor, never the common pool. The model routinely emits a
@@ -114,6 +115,121 @@ public final class EditMetadataMcpTool
             details.responseMarkdown = "1C metadata operation completed"; //$NON-NLS-1$
             return messageFactory.createMessage(this, call, json.serialize(result), details);
         }, SEQUENTIAL_EXECUTOR);
+    }
+
+    public static void normalizeCommonModelArguments(JsonObject arguments)
+    {
+        var operationElement = arguments.get("operation"); //$NON-NLS-1$
+        var operation = operationElement != null && operationElement.isJsonPrimitive()
+            ? operationElement.getAsString() : ""; //$NON-NLS-1$
+        var objectNameElement = arguments.get("object_name"); //$NON-NLS-1$
+        if ("help".equals(operation)) //$NON-NLS-1$
+        {
+            for (var parameter : new ArrayList<>(arguments.keySet()))
+            {
+                if (!"operation".equals(parameter) && !"topic".equals(parameter) && !"verify".equals(parameter)) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                {
+                    arguments.remove(parameter);
+                }
+            }
+        }
+        if ("inspectObject".equals(operation) && objectNameElement != null && objectNameElement.isJsonPrimitive() //$NON-NLS-1$
+            && objectNameElement.getAsString().contains(".Form.")) //$NON-NLS-1$
+        {
+            arguments.addProperty("operation", "inspectForm"); //$NON-NLS-1$ //$NON-NLS-2$
+            operation = "inspectForm"; //$NON-NLS-1$
+        }
+        else if ("inspectForm".equals(operation) && objectNameElement != null //$NON-NLS-1$
+            && objectNameElement.isJsonPrimitive() && !objectNameElement.getAsString().contains(".Form.")) //$NON-NLS-1$
+        {
+            arguments.addProperty("operation", "inspectObject"); //$NON-NLS-1$ //$NON-NLS-2$
+            operation = "inspectObject"; //$NON-NLS-1$
+        }
+        if ("setObjectProperty".equals(operation)) //$NON-NLS-1$
+        {
+            arguments.remove("name"); //$NON-NLS-1$
+            arguments.remove("title"); //$NON-NLS-1$
+            var propertyName = arguments.get("property_name"); //$NON-NLS-1$
+            if (propertyName != null && propertyName.isJsonPrimitive())
+            {
+                var value = propertyName.getAsString();
+                if (!value.isEmpty() && Character.isUpperCase(value.charAt(0)))
+                {
+                    arguments.addProperty("property_name", Character.toLowerCase(value.charAt(0)) //$NON-NLS-1$
+                        + value.substring(1));
+                }
+            }
+        }
+        if ("createObject".equals(operation)) //$NON-NLS-1$
+        {
+            arguments.remove("language_code"); //$NON-NLS-1$
+        }
+        if ("setChildProperty".equals(operation) && arguments.has("property_name") //$NON-NLS-1$ //$NON-NLS-2$
+            && "type".equals(arguments.get("property_name").getAsString()) && arguments.has("type")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        {
+            arguments.addProperty("operation", "setChildType"); //$NON-NLS-1$ //$NON-NLS-2$
+            arguments.remove("property_name"); //$NON-NLS-1$
+            arguments.remove("property_value"); //$NON-NLS-1$
+            arguments.remove("title"); //$NON-NLS-1$
+        }
+        if ("setFormItemProperty".equals(operation) && arguments.has("property_name") //$NON-NLS-1$ //$NON-NLS-2$
+            && "handlers".equalsIgnoreCase(arguments.get("property_name").getAsString()) //$NON-NLS-1$ //$NON-NLS-2$
+            && arguments.has("property_value")) //$NON-NLS-1$
+        {
+            // A form field/table/form's event handlers are a collection (Event -> handler name), not a
+            // scalar; the model routinely still tries to write it as one via setFormItemProperty. Redirect
+            // to the dedicated operation instead of surfacing a dead-end "not a scalar" error, accepting
+            // both `"OnChange"` and `"OnChange:MyHandler"` as the property_value shape.
+            var value = arguments.get("property_value").getAsString(); //$NON-NLS-1$
+            var separator = value.indexOf(':');
+            var eventName = (separator >= 0 ? value.substring(0, separator) : value).trim();
+            var handlerName = separator >= 0 ? value.substring(separator + 1).trim() : null;
+            arguments.addProperty("operation", "addFormEventHandler"); //$NON-NLS-1$ //$NON-NLS-2$
+            arguments.remove("property_name"); //$NON-NLS-1$
+            arguments.remove("property_value"); //$NON-NLS-1$
+            arguments.addProperty("event", eventName); //$NON-NLS-1$
+            if (handlerName != null && !handlerName.isBlank())
+            {
+                arguments.addProperty("handler", handlerName); //$NON-NLS-1$
+            }
+            operation = "addFormEventHandler"; //$NON-NLS-1$
+        }
+        if (("addFormEventHandler".equals(operation) || "removeFormEventHandler".equals(operation)) //$NON-NLS-1$ //$NON-NLS-2$
+            && !arguments.has("event") && arguments.has("event_name")) //$NON-NLS-1$ //$NON-NLS-2$
+        {
+            arguments.add("event", arguments.remove("event_name")); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        if ("addFormCommand".equals(operation)) //$NON-NLS-1$
+        {
+            if (!arguments.has("name") && arguments.has("command_name")) //$NON-NLS-1$ //$NON-NLS-2$
+            {
+                arguments.add("name", arguments.remove("command_name")); //$NON-NLS-1$ //$NON-NLS-2$
+            }
+            arguments.remove("form_type"); //$NON-NLS-1$
+        }
+        if ("addFormButton".equals(operation) && !arguments.has("name") && arguments.has("command_name")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        {
+            arguments.add("name", arguments.get("command_name")); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        if ("removeFormAttribute".equals(operation) && !arguments.has("name") //$NON-NLS-1$ //$NON-NLS-2$
+            && arguments.has("property_name")) //$NON-NLS-1$
+        {
+            arguments.add("name", arguments.remove("property_name")); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        if ("addFormField".equals(operation) && !arguments.has("data_path") && arguments.has("dataPath")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        {
+            arguments.add("data_path", arguments.remove("dataPath")); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        if ("addFormField".equals(operation) && !arguments.has("name") && arguments.has("data_path")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        {
+            var dataPath = arguments.get("data_path").getAsString(); //$NON-NLS-1$
+            var separator = dataPath.lastIndexOf('.');
+            var inferredName = separator >= 0 ? dataPath.substring(separator + 1) : dataPath;
+            if (!inferredName.isBlank())
+            {
+                arguments.addProperty("name", inferredName); //$NON-NLS-1$
+            }
+        }
     }
 
     /**
@@ -196,6 +312,18 @@ public final class EditMetadataMcpTool
             + " Never use file editing tools to create or repair metadata; remove and recreate a wrong child instead."
             + " Operations: " + String.join(", ", new MetadataOperationRegistry().names()) + "."
             + " createObject supports every top-level object type returned by help topic=objectTypes."
+            + " The content of an existing form is editable too: inspectForm reads its attributes,"
+            + " commands and item tree, and addFormAttribute/addFormField/addFormGroup/addFormButton/"
+            + "addFormCommand/addFormEventHandler/moveFormItem/setFormItemProperty change it. Those"
+            + " operations take the form FQN in object_name (Catalog.Products.Form.ItemForm, or"
+            + " CommonForm.Settings). addFormEventHandler wires an event (OnChange, OnCreateAtServer, ...)"
+            + " on the form itself or on one of its fields/tables to a module procedure; a form command"
+            + " (addFormCommand) is for a button/menu action instead, not a field event."
+            + " Never try to edit a Form.form file with Write or Edit: EDT locks it, and these operations"
+            + " are the supported way in."
+            + " A multilingual property (synonym, title, listPresentation, objectPresentation,"
+            + " explanation) is set with setObjectProperty/setChildProperty/setFormItemProperty like any"
+            + " other property; language_code picks the language and defaults to ru."
             + " For an attribute inside a tabular section use addTabularSectionAttribute with"
             + " object_name=Type.Object.TabularSection; addObjectAttribute is only for a top-level object."
             + " Call with operation=help to list operations, then operation=help and topic=<operation>"
@@ -230,9 +358,9 @@ public final class EditMetadataMcpTool
         property(parameters, "topic", "string", "Operation name for detailed help.");
         property(parameters, "project_name", "string", "Exact EDT workspace project name.");
         property(parameters, "object_name", "string", "Top-level FQN such as Catalog.Products. For a tabular-section attribute: Type.Object.Section.");
-        property(parameters, "name", "string", "Name of a child metadata element.");
+        property(parameters, "name", "string", "Identifier of the element being created or addressed: an attribute, tabular section, enum value, register field, form, template, form item, form attribute or form command. Always required by those operations, and never interchangeable with `title` — `title` is only the display text.");
         property(parameters, "new_name", "string", "New top-level object name for renameObject.");
-        property(parameters, "title", "string", "Russian synonym of a new object or child.");
+        property(parameters, "title", "string", "Display text (synonym) of a new object or child, in the language given by language_code. Never a substitute for `name`: pass both.");
         property(parameters, "property_name", "string", "Scalar EDT metadata property name.");
         property(parameters, "property_value", "string", "Scalar property value encoded as a string.");
         property(parameters, "type", "string", "String, Number, Boolean, Date, or a reference: CatalogRef.X, DocumentRef.X, EnumRef.X, ChartOfCharacteristicTypesRef.X, ChartOfAccountsRef.X, ChartOfCalculationTypesRef.X, BusinessProcessRef.X, TaskRef.X, ExchangePlanRef.X. The referenced object must already exist.");
@@ -244,6 +372,8 @@ public final class EditMetadataMcpTool
         property(parameters, "related_object_name", "string", "FQN of a related object, for example AccumulationRegister.Stock.");
         property(parameters, "form_type", "string", "Generated form type. Common: OBJECT (object form), LIST (list form), FOLDER (group form), CHOICE (choice form), FOLDER_CHOICE, RECORD (record form), RECORD_SET (record set form), REPORT, CONSTANTS, GENERIC (arbitrary form). Also supported: SEARCH, REPORT_SETTINGS, REPORT_VARIANT, SAVE, LOAD, DYNAMIC_LIST, CHANGE_HISTORY, VERSION_DATA, VERSION_DIFFERENCES. Pick the type matching the owner: a catalog with groups supports FOLDER and FOLDER_CHOICE, a register supports RECORD_SET and LIST.");
         property(parameters, "template_type", "string", "Template body type. Creatable empty: SPREADSHEET_DOCUMENT (mxl layout), DATA_COMPOSITION_SCHEMA, DATA_COMPOSITION_APPEARANCE_TEMPLATE, HTML_DOCUMENT. The response reports the created body file in details.body_path; an HTML body can then be filled with the Edit tool. TEXT_DOCUMENT, BINARY_DATA, ADD_IN, ACTIVE_DOCUMENT, GRAPHICAL_SCHEMA and GEOGRAPHICAL_SCHEMA wrap external content and cannot be created empty.");
+        property(parameters, "begin_time", "string", "Daily scheduled-job start time in 24-hour HH:mm format, for example 07:00.");
+        property(parameters, "days_repeat_period", "integer", "Number of days between scheduled-job runs; defaults to 1.");
         property(parameters, "platform_version", "string", "Runtime 1C platform version of a new configuration, for example 8.3.24.");
         property(parameters, "compatibility_mode", "string", "Configuration compatibility mode, for example 8.3.24. Defaults to platform_version.");
         property(parameters, "script_variant", "string", "Built-in language variant of a new configuration: English or Russian.");
@@ -251,6 +381,16 @@ public final class EditMetadataMcpTool
         property(parameters, "default_language_name", "string", "Name of the default language object. Optional; defaults from default_language_code (ru -> Русский, en -> English).");
         property(parameters, "version", "string", "Configuration version string, for example 1.0.0.1.");
         property(parameters, "vendor", "string", "Configuration vendor name.");
+        property(parameters, "data_path", "string", "Form data path a field binds to: a form attribute name, or a path inside it such as Объект.Наименование. inspectForm lists the valid paths.");
+        property(parameters, "parent", "string", "Name of the form group that receives a new or moved item. Omit for the form root.");
+        property(parameters, "position", "integer", "Zero-based index inside the parent container. Omit to append.");
+        property(parameters, "item_type", "string", "Concrete form field kind: InputField, CheckBoxField, LabelField, PictureField, SpreadsheetDocumentField, CalendarField, ChartField, and so on. Omit to let EDT derive it from the data path.");
+        property(parameters, "group_type", "string", "Form group kind: UsualGroup, Pages, Page, CommandBar, ButtonGroup, ColumnGroup, Popup. A Page must be added inside a Pages group.");
+        property(parameters, "command_name", "string", "Name of the existing form command a button runs.");
+        property(parameters, "handler", "string", "Name of the form-module procedure a form command or event handler calls. Defaults to the command name for addFormCommand, or to <name><event in Russian> for addFormEventHandler.");
+        property(parameters, "event", "string", "Event name (English or Russian) for addFormEventHandler/removeFormEventHandler, for example OnChange or ПриИзменении. inspectForm lists the handlers already wired; a wrong value is rejected with the exact list this form/field/table supports.");
+        property(parameters, "language_code", "string", "Language code of a multilingual property value such as synonym, title, listPresentation or objectPresentation. Defaults to ru.");
+        property(parameters, "main", "boolean", "Marks a new form attribute as the form's main attribute.");
         property(parameters, "dry_run", "boolean", "Validate and describe the mutation without applying it.");
         property(parameters, "verify", "boolean", "Post-mutation marker auto-check. Enabled by default: the response carries marker_count and the most important markers of the changed resource. Pass false only for bulk work where you will check markers yourself afterwards.");
         parameters.required = Arrays.asList("operation");

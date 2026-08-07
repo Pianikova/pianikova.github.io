@@ -8,6 +8,7 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
@@ -17,6 +18,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.eclipse.core.resources.IProject;
@@ -24,6 +26,7 @@ import org.eclipse.core.resources.IProject;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.Closeables;
 import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IConversationProgressListener;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpTools;
@@ -151,7 +154,8 @@ public class Conversations implements IConversations
      */
     @Override
     public IObservable<ConversationAskResponse> createAskSource(IProject project, String conversationId,
-        ConversationAskRequest request, ICancellationToken cancellationToken)
+        ConversationAskRequest request, ICancellationToken cancellationToken,
+        IConversationProgressListener progressListener)
     {
         return Observables.create(observer -> {
             sessionService.getSessionAsync(project).whenComplete((session, error) -> {
@@ -165,14 +169,16 @@ public class Conversations implements IConversations
                       observer.onCompleted();
                       return;
                   }
-                askWithTools(session.get(), conversationId, request, observer, cancellationToken, 0);
+                askWithTools(session.get(), conversationId, request, observer, cancellationToken, 0,
+                    progressListener);
             });
             return Closeables.Empty;
         });
     }
 
     private void askWithTools(Session session, String conversationId, ConversationAskRequest request,
-        IObserver<ConversationAskResponse> observer, ICancellationToken cancellationToken, int depth)
+        IObserver<ConversationAskResponse> observer, ICancellationToken cancellationToken, int depth,
+        IConversationProgressListener progressListener)
     {
         int maxToolRounds = request.maxToolRounds > 0 ? request.maxToolRounds : MAX_TOOL_ROUNDS;
         if (depth > maxToolRounds)
@@ -212,14 +218,15 @@ public class Conversations implements IConversations
                 return;
             }
             handleToolCalls(session, conversationId, lastResponse, toolCalls, observer, cancellationToken, depth + 1,
-                maxToolRounds);
+                maxToolRounds, progressListener);
         });
 
     }
 
     private void handleToolCalls(Session session, String conversationId, ConversationAskResponse lastResponse,
         ArrayList<McpToolCall> toolCalls, IObserver<ConversationAskResponse> observer,
-        ICancellationToken cancellationToken, int depth, int maxToolRounds)
+        ICancellationToken cancellationToken, int depth, int maxToolRounds,
+        IConversationProgressListener progressListener)
     {
         if (cancellationToken.isCanceled()) {
             observer.onCompleted();
@@ -228,6 +235,10 @@ public class Conversations implements IConversations
 
         McpToolCalls calls = new McpToolCalls();
         calls.addAll(toolCalls);
+
+        List<String> toolNames =
+            toolCalls.stream().map(call -> call.function.name).collect(Collectors.toList());
+        reportToolCallStart(progressListener, toolNames);
 
         CompletableFuture<McpCallToolsResult> future;
         try {
@@ -242,6 +253,7 @@ public class Conversations implements IConversations
         }
 
         future.whenComplete((toolResult, error) -> {
+            reportToolCallEnd(progressListener, toolNames);
             if (cancellationToken.isCanceled())
             {
                 observer.onCompleted();
@@ -256,7 +268,8 @@ public class Conversations implements IConversations
             try {
                 ConversationAskRequest toolRequest = createToolRequest(lastResponse.uuid, toolResult);
                 toolRequest.maxToolRounds = maxToolRounds;
-                askWithTools(session, conversationId, toolRequest, observer, cancellationToken, depth);
+                askWithTools(session, conversationId, toolRequest, observer, cancellationToken, depth,
+                    progressListener);
             }
             catch (Exception e)
             {
@@ -264,6 +277,45 @@ public class Conversations implements IConversations
                 observer.onError(e);
             }
         });
+    }
+
+    /**
+     * Reports a tool-call batch starting, shielding execution from a misbehaving listener: a listener
+     * that throws must not abort the tool calls it is only observing.
+     */
+    private void reportToolCallStart(IConversationProgressListener progressListener, List<String> toolNames)
+    {
+        if (progressListener == null)
+        {
+            return;
+        }
+
+        try
+        {
+            progressListener.onToolCallStart(toolNames);
+        }
+        catch (RuntimeException error)
+        {
+            log.error(error, toolNames.toString());
+        }
+    }
+
+    /** @see #reportToolCallStart */
+    private void reportToolCallEnd(IConversationProgressListener progressListener, List<String> toolNames)
+    {
+        if (progressListener == null)
+        {
+            return;
+        }
+
+        try
+        {
+            progressListener.onToolCallEnd(toolNames);
+        }
+        catch (RuntimeException error)
+        {
+            log.error(error, toolNames.toString());
+        }
     }
 
     private ConversationAskRequest createToolRequest(String parentMessageUuid, McpCallToolsResult toolResult)

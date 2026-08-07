@@ -45,9 +45,10 @@ public class SkillExecutor
         var projectRoot = projectRootFromParameters(request.getParameters());
         var skill = skillPackageLoader.load(request.getSkillId(), projectRoot);
 
+        var completionPolicy = skill.getMetadata().getCompletionPolicy().orElse(null);
         return renderer.renderAsync(skill, request.getParameters(), cancellationToken)
             .thenApply(prompt -> new SkillExecutionResult(prompt,
-                skill.getMetadata().getAllowedTools().orElse(null)));
+                skill.getMetadata().getAllowedTools().orElse(null), completionPolicy));
     }
 
     private static Optional<Path> projectRootFromParameters(Map<String, String> parameters)

@@ -394,10 +394,28 @@ public class DevAutopilot
             // Blank prose with an actual assistant message means the model is working through tools.
             return true;
         }
-        return text.startsWith("создам") || text.startsWith("начну") //$NON-NLS-1$ //$NON-NLS-2$
-            || reasoning.contains("начну с создания") || reasoning.contains("теперь начну") //$NON-NLS-1$ //$NON-NLS-2$
-            || reasoning.contains("следующий шаг") || reasoning.contains("нужно вызвать jshell"); //$NON-NLS-1$ //$NON-NLS-2$
+        for (String marker : CONTINUATION_MARKERS)
+        {
+            if (text.contains(marker) || reasoning.contains(marker))
+            {
+                return true;
+            }
+        }
+        return false;
     }
+
+    /**
+     * Phrases meaning "I stopped talking but intend to keep acting", in whichever language the model
+     * happened to answer in. The model is not reliably Russian-first even in a Russian-script-variant
+     * configuration, and a phrase missed here silently ends the run right before the mutating call it
+     * announced, as observed with an English "I'll continue... Let me now write the BSL module code."
+     * that had no Russian equivalent to match.
+     */
+    private static final String[] CONTINUATION_MARKERS = { "создам", "начну", "начну с создания", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        "теперь начну", "следующий шаг", "нужно вызвать jshell", "продолжу", "далее я", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+        "i'll continue", "i will continue", "let me now", "let me continue", "i'll now", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+        "i will now", "next, i'll", "next i'll", "now i'll", "now let me", "i'll proceed", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
+        "let's continue", "next step is", "the next step" }; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
     private String autoContinuePrompt(Request request)
     {

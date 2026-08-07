@@ -18,10 +18,23 @@ public class ReplaceResult
     private final int replaceOffset;
     private final int replaceLength;
     private final String replacementText;
+    private final String nearestMatchHint;
 
     public ReplaceResult(String updatedContent, int addedLines, int removedLines, boolean success)
     {
         this(updatedContent, addedLines, removedLines, success, false);
+    }
+
+    /**
+     * Constructs a failed (not-found) result carrying a diagnostic hint pointing at the closest
+     * text actually found in the file, so the caller can correct {@code old_content} without a
+     * separate round trip.
+     */
+    public ReplaceResult(String updatedContent, int addedLines, int removedLines, boolean success,
+        String nearestMatchHint)
+    {
+        this(updatedContent, addedLines, removedLines, success, false, 0, 0, 0, 0, false, 0, 0, null,
+            nearestMatchHint);
     }
 
     public ReplaceResult(String updatedContent, int addedLines, int removedLines, boolean success,
@@ -41,6 +54,15 @@ public class ReplaceResult
         boolean multipleOccurrences, int matchStartLine, int matchStartColumn, int matchEndLine, int matchEndColumn,
         boolean regionReplaceable, int replaceOffset, int replaceLength, String replacementText)
     {
+        this(updatedContent, addedLines, removedLines, success, multipleOccurrences, matchStartLine, matchStartColumn,
+            matchEndLine, matchEndColumn, regionReplaceable, replaceOffset, replaceLength, replacementText, null);
+    }
+
+    public ReplaceResult(String updatedContent, int addedLines, int removedLines, boolean success,
+        boolean multipleOccurrences, int matchStartLine, int matchStartColumn, int matchEndLine, int matchEndColumn,
+        boolean regionReplaceable, int replaceOffset, int replaceLength, String replacementText,
+        String nearestMatchHint)
+    {
         this.updatedContent = updatedContent;
         this.addedLines = addedLines;
         this.removedLines = removedLines;
@@ -54,6 +76,7 @@ public class ReplaceResult
         this.replaceOffset = replaceOffset;
         this.replaceLength = replaceLength;
         this.replacementText = replacementText;
+        this.nearestMatchHint = nearestMatchHint;
     }
 
     public String getUpdatedContent()
@@ -150,5 +173,15 @@ public class ReplaceResult
     public String getReplacementText()
     {
         return replacementText;
+    }
+
+    /**
+     * @return for a failed, not-found result, a short excerpt of the text currently in the file that
+     *         most closely resembles the requested {@code old_content} — {@code null} when the result
+     *         succeeded or no sufficiently similar text was found.
+     */
+    public String getNearestMatchHint()
+    {
+        return nearestMatchHint;
     }
 }

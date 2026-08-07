@@ -73,6 +73,54 @@ final class MetadataRequest
     @SerializedName("template_type")
     String templateType;
 
+    /** Daily scheduled-job start time in 24-hour HH:mm format. */
+    @SerializedName("begin_time")
+    String beginTime;
+
+    /** Number of days between scheduled-job runs. */
+    @SerializedName("days_repeat_period")
+    Integer daysRepeatPeriod;
+
+    /** Form data path of a field, for example {@code Объект.Наименование}. */
+    @SerializedName("data_path")
+    String dataPath;
+
+    /** Name of the form group that receives a new item; absent means the form root. */
+    String parent;
+
+    /** Zero-based index inside the parent container; absent means append. */
+    Integer position;
+
+    /** Concrete form field kind, for example {@code InputField} or {@code CheckBoxField}. */
+    @SerializedName("item_type")
+    String itemType;
+
+    /** Form group kind: {@code UsualGroup}, {@code Pages}, {@code Page}, {@code CommandBar}, ... */
+    @SerializedName("group_type")
+    String groupType;
+
+    /** Name of the form command a button runs. */
+    @SerializedName("command_name")
+    String commandName;
+
+    /** Name of the form-module procedure a form command calls. */
+    String handler;
+
+    /** Event name (English or Russian) for addFormEventHandler/removeFormEventHandler. */
+    String event;
+
+    /** Language code of a multilingual property value; defaults to {@code ru}. */
+    @SerializedName("language_code")
+    String languageCode;
+
+    /** Marks a new form attribute as the main one. */
+    Boolean main;
+
+    boolean mainEnabled()
+    {
+        return main != null && main.booleanValue();
+    }
+
     @SerializedName("dry_run")
     boolean dryRun;
 

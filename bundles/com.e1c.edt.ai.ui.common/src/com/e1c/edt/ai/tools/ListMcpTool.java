@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,33 +49,18 @@ public class ListMcpTool
 	private static final int LIMIT = 100;
 
     @SuppressWarnings("nls")
-    private static final List<String> IGNORE_PATTERNS = Arrays.asList(
+    static final List<String> IGNORE_PATTERNS = Arrays.asList(
 		"node_modules/",
 		"__pycache__/",
 		".git/",
-		"dist/",
-		"build/",
-		"target/",
-		"vendor/",
 		"bin/",
 		"obj/",
-		".idea/",
-		".vscode/",
 		".zig-cache/",
-		"zig-out",
 		".coverage",
-		"coverage/",
 		"tmp/",
 		"temp/",
 		".cache/",
-		"cache/",
-		"logs/",
-		".venv/",
-		"venv/",
-		"env/",
-		".metadata/",
-		".recommenders/",
-		".settings/"
+        "cache/"
 	);
 
 	@SuppressWarnings("nls")
@@ -98,20 +84,23 @@ public class ListMcpTool
 	private final IMcpToolsCallMessageFactory messageFactory;
     private final IMarkdownUtils markdownUtils;
     private final Provider<ITreeBuilder> treeBuilderProvider;
+    private final IPatternMatcher patternMatcher;
 
 	@Inject
     public ListMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IMarkdownUtils markdownUtils,
-        Provider<ITreeBuilder> treeBuilderProvider)
+        Provider<ITreeBuilder> treeBuilderProvider, IPatternMatcher patternMatcher)
 	{
 		Preconditions.checkNotNull(json);
 		Preconditions.checkNotNull(messageFactory);
 		Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(treeBuilderProvider);
+        Preconditions.checkNotNull(patternMatcher);
 
 		this.json = json;
 		this.messageFactory = messageFactory;
 		this.markdownUtils = markdownUtils;
         this.treeBuilderProvider = treeBuilderProvider;
+        this.patternMatcher = patternMatcher;
 
 		spec = createSpecification();
 	}
@@ -138,6 +127,7 @@ public class ListMcpTool
 
 		var request = optionalRequest.get();
 		var path = request.path != null && !request.path.isBlank() ? request.path : System.getProperty("user.dir");
+		var pattern = request.pattern != null && !request.pattern.isBlank() ? request.pattern : "*";
 
 		var ignorePatterns = new HashSet<>(IGNORE_PATTERNS);
 		if (request.ignore != null && !request.ignore.isEmpty())
@@ -166,15 +156,17 @@ public class ListMcpTool
 
 			var result = new Result();
 			result.path = path;
+			result.items = new ArrayList<>();
 
 			try
 			{
-				var files = new ArrayList<String>();
 				var relevantPaths = new HashSet<String>();
-				scanDirectory(baseDir.toPath(), files, relevantPaths, ignorePatterns, 0, LIMIT, cancellationToken);
+				scanDirectory(baseDir.toPath(), baseDir.toPath(), pattern, ignorePatterns, result, relevantPaths,
+					cancellationToken, LIMIT);
 
-				result.count = files.size();
-				result.truncated = files.size() >= LIMIT;
+				result.count = result.items.size();
+				result.truncated = result.items.size() >= LIMIT;
+				result.items.sort((a, b) -> Long.compare(b.modified, a.modified));
 
                 ITreeBuilder treeBuilder = treeBuilderProvider.get();
 				buildTree(baseDir.toPath(), "", 0, relevantPaths, treeBuilder, ignorePatterns,
@@ -198,10 +190,11 @@ public class ListMcpTool
 		});
 	}
 
-	private void scanDirectory(Path dir, List<String> files, Set<String> relevantPaths, Set<String> ignorePatterns,
-		int depth, int limit, ICancellationToken cancellationToken) throws IOException
+    @SuppressWarnings("nls")
+    private void scanDirectory(Path baseDir, Path dir, String pattern, Set<String> ignorePatterns, Result result,
+        Set<String> relevantPaths, ICancellationToken cancellationToken, int limit) throws IOException
 	{
-		if (cancellationToken.isCanceled())
+		if (cancellationToken.isCanceled() || result.items.size() >= limit)
 		{
 			return;
 		}
@@ -209,7 +202,7 @@ public class ListMcpTool
 		try (Stream<Path> stream = Files.list(dir))
 		{
 			stream.sorted(Comparator.comparing(Path::getFileName)).forEach(path -> {
-				if (cancellationToken.isCanceled() || files.size() >= limit)
+				if (cancellationToken.isCanceled() || result.items.size() >= limit)
 				{
 					return;
 				}
@@ -217,29 +210,44 @@ public class ListMcpTool
 				try
 				{
 					var relativePath = dir.relativize(path).toString();
-					var shouldIgnore = shouldIgnore(relativePath, path, ignorePatterns);
-					if (shouldIgnore)
+					if (shouldIgnore(relativePath, path, ignorePatterns))
 					{
 						return;
 					}
 
-                    if (Files.isDirectory(path))
-                    {
-                        if (files.size() < limit)
-						{
-							scanDirectory(path, files, relevantPaths, ignorePatterns, depth + 1, limit, cancellationToken);
-                        }
+					var attrs = Files.readAttributes(path, BasicFileAttributes.class);
+					var fullRelativePath = baseDir.relativize(path).toString().replace("\\", "/");
+					var matchesPattern = patternMatcher.matches(fullRelativePath, pattern);
 
-                        if (containsRelevantFiles(path, relevantPaths))
-                        {
-                            relevantPaths.add(path.toAbsolutePath().toString());
-						}
-                    }
-					else if (Files.isRegularFile(path))
+					if (Files.isDirectory(path))
 					{
-						files.add(relativePath);
+						if (matchesPattern)
+						{
+							var dirInfo = new ItemInfo();
+							dirInfo.path = path.toAbsolutePath().toString();
+							dirInfo.type = "directory";
+							dirInfo.modified = attrs.lastModifiedTime().toMillis();
+							result.items.add(dirInfo);
+							relevantPaths.add(path.toAbsolutePath().toString());
+						}
+
+						var beforeCount = relevantPaths.size();
+						scanDirectory(baseDir, path, pattern, ignorePatterns, result, relevantPaths,
+							cancellationToken, limit);
+						if (relevantPaths.size() > beforeCount)
+						{
+							relevantPaths.add(dir.toAbsolutePath().toString());
+						}
+					}
+					else if (Files.isRegularFile(path) && matchesPattern)
+					{
+						var fileInfo = new ItemInfo();
+						fileInfo.path = path.toAbsolutePath().toString();
+						fileInfo.type = "file";
+						fileInfo.modified = attrs.lastModifiedTime().toMillis();
+						result.items.add(fileInfo);
 						relevantPaths.add(path.toAbsolutePath().toString());
-						relevantPaths.add(path.getParent().toAbsolutePath().toString());
+						relevantPaths.add(dir.toAbsolutePath().toString());
 					}
 				}
 				catch (IOException e)
@@ -267,14 +275,6 @@ public class ListMcpTool
 			}
 		}
 		return false;
-	}
-
-	private boolean containsRelevantFiles(Path dir, Set<String> relevantPaths) throws IOException
-	{
-		try (Stream<Path> stream = Files.list(dir))
-		{
-			return stream.anyMatch(path -> relevantPaths.contains(path.toAbsolutePath().toString()));
-		}
 	}
 
     @SuppressWarnings("nls")
@@ -341,10 +341,14 @@ public class ListMcpTool
 		description.append("Lists directory contents in a tree structure.");
 		description.append("\n\nUsage:");
 		description.append("\n- Arguments must be a single JSON object.");
-		description.append("\n- Lists all files and directories in a tree format.");
-		description.append("\n- Automatically ignores common build/cache directories: node_modules, .git, dist, build, etc.");
-		description.append("\n- Optionally specify custom ignore patterns.");
-		description.append("\n- Limited to " + LIMIT + " files for performance.");
+		description.append("\n- Lists all files and directories in a tree format, optionally filtered by `pattern`.");
+		description.append("\n- `pattern` uses the same glob syntax as `" + GlobMcpTool.TOOL_NAME + "`: a pattern without \"/\" matches the name at any depth; a pattern with \"/\" is anchored to the root unless it contains \"**\". Defaults to \"*\" (everything).");
+		description.append("\n- Unlike `" + GlobMcpTool.TOOL_NAME + "`, there is no depth limit: the whole tree under `path` is scanned.");
+        description
+            .append("\n- Automatically ignores common build/cache directories: node_modules, .git, bin, obj, etc.");
+		description.append("\n- Optionally specify custom ignore patterns via `ignore`.");
+		description.append("\n- Limited to " + LIMIT + " matched items for performance. If the response has \"truncated\": true, more than " + LIMIT + " items were found; use `" + GlobMcpTool.TOOL_NAME + "` or `" + SearchTextMcpTool.TOOL_NAME + "` with a narrower pattern or pagination instead of retrying `" + TOOL_NAME + "`.");
+		description.append("\n- Response includes `items` (each: `path` absolute, `type` file/directory, `modified` timestamp, sorted newest first) in addition to the rendered `tree`.");
 		description.append("\n- Use this tool to explore directory structure quickly.");
 		description.append("\n\nExample:");
 		description.append("\n  Q: "); description.append(QuestionExample);
@@ -361,6 +365,12 @@ public class ListMcpTool
 		pathProp.description =
 			"The absolute path to the directory to list. If not specified, the current working directory will be used.";
 		properties.put("path", pathProp);
+
+		var patternProp = new McpToolCallProperty();
+		patternProp.type = "string";
+		patternProp.description =
+			"Glob pattern to filter files/directories (same syntax as " + GlobMcpTool.TOOL_NAME + ": '*', '?', '**'). Defaults to \"*\" (everything, subject to the default ignore list).";
+		properties.put("pattern", patternProp);
 
 		var ignoreProp = new McpToolCallProperty();
 		ignoreProp.type = "array";
@@ -380,8 +390,23 @@ public class ListMcpTool
 		@SerializedName("path")
 		public String path;
 
+		@SerializedName("pattern")
+		public String pattern;
+
 		@SerializedName("ignore")
 		public List<String> ignore;
+	}
+
+	private static class ItemInfo
+	{
+		@SerializedName("path")
+		public String path;
+
+		@SerializedName("type")
+		public String type;
+
+		@SerializedName("modified")
+		public long modified;
 	}
 
 	private static class Result
@@ -395,8 +420,11 @@ public class ListMcpTool
 		@SerializedName("truncated")
 		public boolean truncated;
 
-		// Large field last so it is dropped first if the response is truncated.
+		// Large fields last so they are dropped first if the response is truncated.
 		@SerializedName("tree")
 		public String tree;
+
+		@SerializedName("items")
+		public List<ItemInfo> items;
 	}
 }

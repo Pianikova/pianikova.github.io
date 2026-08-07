@@ -16,17 +16,24 @@ public class SkillExecutionResult
 {
     private final String prompt;
     private final Set<String> allowedTools;
+    private final SkillCompletionPolicy completionPolicy;
 
     public SkillExecutionResult(String prompt)
     {
-        this(prompt, null);
+        this(prompt, null, null);
     }
 
     public SkillExecutionResult(String prompt, Set<String> allowedTools)
     {
+        this(prompt, allowedTools, null);
+    }
+
+    public SkillExecutionResult(String prompt, Set<String> allowedTools, SkillCompletionPolicy completionPolicy)
+    {
         this.prompt = prompt;
         this.allowedTools = allowedTools == null ? null
             : Collections.unmodifiableSet(new LinkedHashSet<>(allowedTools));
+        this.completionPolicy = completionPolicy;
     }
 
     public String getPrompt()
@@ -40,5 +47,10 @@ public class SkillExecutionResult
     public Optional<Set<String>> getAllowedTools()
     {
         return Optional.ofNullable(allowedTools);
+    }
+
+    public Optional<SkillCompletionPolicy> getCompletionPolicy()
+    {
+        return Optional.ofNullable(completionPolicy);
     }
 }

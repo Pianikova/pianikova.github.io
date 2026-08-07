@@ -9,19 +9,27 @@ import java.security.NoSuchAlgorithmException;
 import org.eclipse.core.runtime.Plugin;
 
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentationProvider;
+import com._1c.g5.v8.dt.cmi.ICommandInterfaceAccessor;
 import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
 import com._1c.g5.v8.dt.core.filesystem.IQualifiedNameFilePathConverter;
 import com._1c.g5.v8.dt.core.model.IModelEditingSupport;
 import com._1c.g5.v8.dt.core.model.IModelObjectFactory;
 import com._1c.g5.v8.dt.core.naming.ITopObjectFqnGenerator;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
+import com._1c.g5.v8.dt.core.platform.IConfigurationProvider;
 import com._1c.g5.v8.dt.core.platform.IDerivedDataManagerProvider;
 import com._1c.g5.v8.dt.core.platform.IEditingLanguageManager;
+import com._1c.g5.v8.dt.core.platform.IMdObjectByTypeProvider;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.core.platform.management.IDtHostResourceManager;
+import com._1c.g5.v8.dt.form.IFormObjectDefaultValueProvider;
 import com._1c.g5.v8.dt.form.generator.IFormFieldGenerator;
 import com._1c.g5.v8.dt.form.generator.IFormGenerator;
+import com._1c.g5.v8.dt.form.service.command.ICommandNameService;
+import com._1c.g5.v8.dt.form.service.item.IFormItemManagementService;
+import com._1c.g5.v8.dt.form.service.item.IFormItemMovementService;
+import com._1c.g5.v8.dt.form.service.item.IFormItemTypeManagementService;
 import com._1c.g5.v8.dt.form.service.datasourceinfo.IDataSourceInfoAssociationService;
 import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
 import com._1c.g5.v8.dt.md.refactoring.core.IMdRefactoringService;
@@ -29,6 +37,7 @@ import com._1c.g5.v8.dt.platform.version.IRuntimeVersionSupport;
 import com._1c.g5.v8.dt.search.core.text.ITextSearchIndexProvider;
 import com._1c.g5.v8.dt.validation.marker.v2.IMarkerManagerV2;
 import com._1c.g5.wiring.AbstractServiceAwareModule;
+import com._1c.g5.wiring.ServiceProperties;
 import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
@@ -134,8 +143,24 @@ class ContextModule
         bind(IModelObjectFactory.class).toService();
         bind(IFormGenerator.class).toService();
         bind(IFormFieldGenerator.class).toService();
+        // Editing an existing form goes through these native EDT services: they keep item ids, data
+        // paths and derived field types consistent, which hand-built model edits cannot.
+        bind(IFormItemManagementService.class).toService();
+        bind(IFormItemMovementService.class).toService();
+        bind(IFormItemTypeManagementService.class).toService();
         bind(IEditingLanguageManager.class).toService();
         bind(IMdRefactoringService.class).toService();
+        // Collaborators of EDT's own form-loading Mapping classes (FormCommandInterfaceMapping,
+        // FormItemsMapping, ...), constructed by hand and field-injected via BaseActivator.injectMembers
+        // so this tool can drive the same headless form load EDT's editor performs, to catch a
+        // structurally broken form before a human's editor does instead.
+        bind(IModelObjectFactory.class).annotatedWith(Names.named("FormModelObjectFactory")) //$NON-NLS-1$
+            .toService(ServiceProperties.named("FormModelObjectFactory")); //$NON-NLS-1$
+        bind(ICommandNameService.class).toService();
+        bind(ICommandInterfaceAccessor.class).toService();
+        bind(IMdObjectByTypeProvider.class).toService();
+        bind(IConfigurationProvider.class).toService();
+        bind(IFormObjectDefaultValueProvider.class).toService();
         // @formatter:on
     }
 }

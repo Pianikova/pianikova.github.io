@@ -36,7 +36,7 @@ public final class MetadataOperationRegistry
             "{\"operation\":\"inspectObject\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Order\"}"); //$NON-NLS-1$
         add("createObject", "Creates any top-level object type listed by help topic=objectTypes.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name"), //$NON-NLS-1$ //$NON-NLS-2$
-            set("title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
+            set("title", "name", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "{\"operation\":\"createObject\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"title\":\"Products\"}"); //$NON-NLS-1$
         add("setObjectProperty", //$NON-NLS-1$
             "Changes one property of an existing top-level object. Use object_name=Configuration to edit" //$NON-NLS-1$
@@ -44,9 +44,23 @@ public final class MetadataOperationRegistry
                 + " defaultRunMode, or namePrefix. Also sets single-valued reference properties that some object" //$NON-NLS-1$
                 + " types require: pass the target FQN as property_value, for example property_name=task with" //$NON-NLS-1$
                 + " property_value=Task.MyTask for a BusinessProcess, or chartOfCalculationTypes for a" //$NON-NLS-1$
-                + " CalculationRegister. For a collection of references use addObjectReference instead.", //$NON-NLS-1$
-            set("project_name", "object_name", "property_name", "property_value"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+                + " CalculationRegister. For a collection of references use addObjectReference instead." //$NON-NLS-1$
+                + " Multilingual properties (synonym, listPresentation, objectPresentation," //$NON-NLS-1$
+                + " recordPresentation, explanation, ...) are set the same way; language_code picks the" //$NON-NLS-1$
+                + " language and defaults to ru. Which of them an object type has differs by type, and a" //$NON-NLS-1$
+                + " rejected property_name reports the exact list.", //$NON-NLS-1$
+            set("project_name", "object_name", "property_name", "property_value"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            set("language_code", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
             "{\"operation\":\"setObjectProperty\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"property_name\":\"comment\",\"property_value\":\"Managed by AI\"}"); //$NON-NLS-1$
+        add("setScheduledJobSchedule", //$NON-NLS-1$
+            "Sets a ScheduledJob's persisted daily schedule. Use this operation instead of setObjectProperty:" //$NON-NLS-1$
+                + " schedule is a structured EDT model object, not an object reference or JSON scalar." //$NON-NLS-1$
+                + " begin_time is 24-hour HH:mm; days_repeat_period defaults to 1.", //$NON-NLS-1$
+            set("project_name", "object_name", "begin_time"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            set("days_repeat_period", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
+            "{\"operation\":\"setScheduledJobSchedule\",\"project_name\":\"MyProject\"," //$NON-NLS-1$
+                + "\"object_name\":\"ScheduledJob.DailyJob\",\"begin_time\":\"07:00\"," //$NON-NLS-1$
+                + "\"days_repeat_period\":1}"); //$NON-NLS-1$
         add("renameObject", "Renames a top-level object using the EDT refactoring service.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name", "new_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             "{\"operation\":\"renameObject\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.OldName\",\"new_name\":\"NewName\"}"); //$NON-NLS-1$
@@ -76,9 +90,12 @@ public final class MetadataOperationRegistry
             set("project_name", "object_name", "name", "field_kind"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             "{\"operation\":\"removeRegisterField\",\"project_name\":\"MyProject\",\"object_name\":\"InformationRegister.Prices\",\"name\":\"Price\",\"field_kind\":\"resource\"}"); //$NON-NLS-1$
 
-        add("setChildProperty", "Changes a scalar property, synonym, or comment of an existing child.", //$NON-NLS-1$ //$NON-NLS-2$
+        add("setChildProperty", //$NON-NLS-1$
+            "Changes a scalar or multilingual property of an existing child, for example comment," //$NON-NLS-1$
+                + " synonym, toolTip or fillValue. language_code picks the language of a multilingual" //$NON-NLS-1$
+                + " value and defaults to ru.", //$NON-NLS-1$
             set("project_name", "object_name", "child_kind", "name", "property_name", "property_value"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
-            set("dry_run"), //$NON-NLS-1$
+            set("language_code", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
             "{\"operation\":\"setChildProperty\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Order.Lines\",\"child_kind\":\"tabular_section_attribute\",\"name\":\"Quantity\",\"property_name\":\"comment\",\"property_value\":\"Ordered quantity\"}"); //$NON-NLS-1$
         add("setChildType", "Changes the type of an existing attribute or register field.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name", "child_kind", "name", "type"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
@@ -108,12 +125,15 @@ public final class MetadataOperationRegistry
             "Creates a generated form with a persisted Form.form body and makes it the owner's default form of that" //$NON-NLS-1$
                 + " kind when such a slot is free. form_type values: OBJECT, LIST, FOLDER, CHOICE, FOLDER_CHOICE," //$NON-NLS-1$
                 + " RECORD, RECORD_SET, REPORT, CONSTANTS, GENERIC, SEARCH, REPORT_SETTINGS, REPORT_VARIANT, SAVE," //$NON-NLS-1$
-                + " LOAD, DYNAMIC_LIST, CHANGE_HISTORY, VERSION_DATA, VERSION_DIFFERENCES.", //$NON-NLS-1$
+                + " LOAD, DYNAMIC_LIST, CHANGE_HISTORY, VERSION_DATA, VERSION_DIFFERENCES. Use GENERIC for a new" //$NON-NLS-1$
+                + " empty DataProcessor form (or any form you will assemble with addFormAttribute/addFormField/" //$NON-NLS-1$
+                + " addFormGroup/addFormCommand/addFormButton); GENERIC does not invoke EDT's layout generator.", //$NON-NLS-1$
             set("project_name", "object_name", "name", "form_type"), set("title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
             "{\"operation\":\"createObjectForm\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"name\":\"ItemForm\",\"form_type\":\"OBJECT\"}"); //$NON-NLS-1$
         add("removeObjectForm", "Removes an object form and its external Form.form body.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name", "name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             "{\"operation\":\"removeObjectForm\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"name\":\"ItemForm\"}"); //$NON-NLS-1$
+        addFormOperations();
         add("createObjectTemplate", //$NON-NLS-1$
             "Creates a persisted empty template and returns the exact body file in details.body_path." //$NON-NLS-1$
                 + " template_type values: SPREADSHEET_DOCUMENT, DATA_COMPOSITION_SCHEMA," //$NON-NLS-1$
@@ -133,7 +153,9 @@ public final class MetadataOperationRegistry
             set("project_name", "object_name", "subordinate_kind", "name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             "{\"operation\":\"removeSubordinateObject\",\"project_name\":\"MyProject\",\"object_name\":\"CalculationRegister.Payroll\",\"subordinate_kind\":\"recalculation\",\"name\":\"Main\"}"); //$NON-NLS-1$
         add("createConfiguration", //$NON-NLS-1$
-            "Creates a new EDT 1C configuration project. project_name is the new project name. Optional parameters set" //$NON-NLS-1$
+            "Creates a new EDT 1C configuration project. Unlike every other operation, project_name here" //$NON-NLS-1$
+                + " names the configuration to CREATE, not an existing project, and it must not exist yet;" //$NON-NLS-1$
+                + " there is no separate `name` parameter. Optional parameters set" //$NON-NLS-1$
                 + " configuration properties: platform_version (runtime version), compatibility_mode (e.g. 8.3.24)," //$NON-NLS-1$
                 + " script_variant (English or Russian), default_language_code (e.g. ru) and default_language_name" //$NON-NLS-1$
                 + " (creates the language and marks it default), version, vendor, and title (synonym). If the user did" //$NON-NLS-1$
@@ -165,6 +187,105 @@ public final class MetadataOperationRegistry
                 + " writing: it both confirms the owner exists and returns the exact path.", //$NON-NLS-1$
             set("project_name", "object_name"), set(), //$NON-NLS-1$ //$NON-NLS-2$
             "{\"operation\":\"listModules\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\"}"); //$NON-NLS-1$
+    }
+
+    /**
+     * Operations on the content of an <em>existing</em> form. They all address the form by its FQN in
+     * {@code object_name}, because a form body is a resource of its own and EDT forbids editing the
+     * {@code Form.form} file directly; these operations are the only supported way in.
+     */
+    @SuppressWarnings("nls")
+    private void addFormOperations()
+    {
+        var form = set("project_name", "object_name");
+        add("inspectForm",
+            "Reads an existing form: its attributes, commands, parameters and the whole item tree with"
+                + " names, kinds, data paths and titles. Call it before changing a form you did not create:"
+                + " every other form operation addresses items by the names listed here.",
+            form, set(),
+            "{\"operation\":\"inspectForm\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\"}");
+        add("addFormAttribute",
+            "Adds an attribute (реквизит формы) to an existing form. `type` accepts the same names as an"
+                + " object attribute plus the types a metadata object produces (CatalogObject.X,"
+                + " DataProcessorObject.X, InformationRegisterRecordSet.X, ...) and platform types such as"
+                + " DynamicList, ValueTable, ValueTree. Pass main=true for the form's main attribute.",
+            union(form, set("name", "type")),
+            union(TYPE_PARAMETERS, set("title", "language_code", "main", "dry_run")),
+            "{\"operation\":\"addFormAttribute\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"Комментарий\",\"type\":\"String\",\"length\":200}");
+        add("removeFormAttribute", "Removes an attribute from an existing form.",
+            union(form, set("name")), set("dry_run"),
+            "{\"operation\":\"removeFormAttribute\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"Комментарий\"}");
+        add("addFormField",
+            "Adds a field (элемент формы) bound to `data_path` — an existing form attribute or one of its"
+                + " properties, for example Объект.Наименование. inspectForm lists the available paths."
+                + " `parent` names the group that receives the field; omit it for the form root."
+                + " `item_type` overrides the field kind EDT derives (InputField, CheckBoxField,"
+                + " LabelField, PictureField, ...).",
+            union(form, set("name", "data_path")),
+            set("parent", "position", "item_type", "title", "language_code", "dry_run"),
+            "{\"operation\":\"addFormField\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"Комментарий\",\"data_path\":\"Объект.Комментарий\",\"parent\":\"ГруппаОсновное\"}");
+        add("addFormGroup",
+            "Adds a group to an existing form. group_type: UsualGroup (обычная группа), Pages (страницы),"
+                + " Page (страница, parent must be a Pages group), CommandBar, ButtonGroup, ColumnGroup,"
+                + " Popup. A page therefore needs a Pages group created first.",
+            union(form, set("name", "group_type")),
+            set("parent", "position", "title", "language_code", "dry_run"),
+            "{\"operation\":\"addFormGroup\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"Страницы\",\"group_type\":\"Pages\"}");
+        add("addFormButton",
+            "Adds a button bound to an existing form command named by `command_name`. Create the command"
+                + " with addFormCommand first. Put the button into a CommandBar group with `parent` to make"
+                + " it appear on the command bar.",
+            union(form, set("name", "command_name")),
+            set("parent", "position", "title", "language_code", "dry_run"),
+            "{\"operation\":\"addFormButton\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"ЗаполнитьПоУмолчанию\",\"command_name\":\"ЗаполнитьПоУмолчанию\",\"parent\":\"ФормаКоманднаяПанель\"}");
+        add("addFormCommand",
+            "Adds a form command (команда формы) and points it at a form-module procedure. `handler`"
+                + " defaults to the command name. A 1C command is incomplete without that procedure, so"
+                + " the form keeps an error marker until you write it: the response returns the exact"
+                + " file in details.handler_module_path, and BSL is written with Write/Edit, not with this"
+                + " tool. A command becomes visible only through addFormButton.",
+            union(form, set("name")),
+            set("title", "language_code", "handler", "dry_run"),
+            "{\"operation\":\"addFormCommand\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"ЗаполнитьПоУмолчанию\",\"title\":\"Заполнить по умолчанию\"}");
+        add("removeFormCommand", "Removes a form command and every button bound to it.",
+            union(form, set("name")), set("dry_run"),
+            "{\"operation\":\"removeFormCommand\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"ЗаполнитьПоУмолчанию\"}");
+        add("addFormEventHandler",
+            "Attaches an event handler (обработчик события) to the form itself, or to one of its fields or"
+                + " tables when `name` is given. `event` is the event name in English or Russian, for example"
+                + " OnChange/ПриИзменении, OnCreateAtServer/ПриСозданииНаСервере,"
+                + " OnActivateRow/ПриАктивизацииСтроки. Groups, buttons, form attributes and tabular-section"
+                + " columns have no events of their own; call inspectForm first to see what a field or table"
+                + " already has wired. A wrong `event` is rejected with the exact list this element supports."
+                + " `handler` defaults to <name><event in Russian> for an item, or the event name itself for"
+                + " the form. The response reports the module file in details.handler_module_path and the"
+                + " required directive in details.side: write the procedure there with Write/Edit. Until then"
+                + " the form keeps an error marker about the missing handler.",
+            union(form, set("event")), set("name", "handler", "dry_run"),
+            "{\"operation\":\"addFormEventHandler\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"Наименование\",\"event\":\"OnChange\"}");
+        add("removeFormEventHandler",
+            "Removes an event handler from the form itself, or from one of its fields or tables when `name`"
+                + " is given. The handler procedure itself is left in the module; remove it separately with"
+                + " Delete/Edit if it is now unused.",
+            union(form, set("event")), set("name", "dry_run"),
+            "{\"operation\":\"removeFormEventHandler\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"Наименование\",\"event\":\"OnChange\"}");
+        add("removeFormItem", "Removes a field, group, button or table from a form, with its children.",
+            union(form, set("name")), set("dry_run"),
+            "{\"operation\":\"removeFormItem\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"Комментарий\"}");
+        add("moveFormItem",
+            "Moves an existing form item into `parent` (omit for the form root) at `position`"
+                + " (zero-based; omit to append).",
+            union(form, set("name")), set("parent", "position", "dry_run"),
+            "{\"operation\":\"moveFormItem\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"Комментарий\",\"parent\":\"СтраницаДополнительно\"}");
+        add("setFormItemProperty",
+            "Changes one property of a form item, form attribute or form command. Multilingual properties"
+                + " such as title are written for `language_code` (default ru).",
+            union(form, set("name", "property_name", "property_value")), set("language_code", "dry_run"),
+            "{\"operation\":\"setFormItemProperty\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"Комментарий\",\"property_name\":\"title\",\"property_value\":\"Комментарий\"}");
+        add("setFormProperty",
+            "Changes one property of the form itself, for example title, windowOpeningMode or autoTitle.",
+            union(form, set("property_name", "property_value")), set("language_code", "dry_run"),
+            "{\"operation\":\"setFormProperty\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"property_name\":\"title\",\"property_value\":\"Товар\"}");
     }
 
     Collection<MetadataOperationDescriptor> all()
@@ -220,6 +341,10 @@ public final class MetadataOperationRegistry
                 errors.add("Unknown parameter `" + parameter + "` for operation `" + operation //$NON-NLS-1$ //$NON-NLS-2$
                     + "`. Valid parameters: " + String.join(", ", valid) + "."); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             }
+        }
+        if (!errors.isEmpty())
+        {
+            errors.add("Correct example for operation `" + operation + "`: " + descriptor.example); //$NON-NLS-1$ //$NON-NLS-2$
         }
         return errors;
     }

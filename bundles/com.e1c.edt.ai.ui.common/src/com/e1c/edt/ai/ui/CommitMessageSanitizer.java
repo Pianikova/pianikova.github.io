@@ -45,7 +45,7 @@ public final class CommitMessageSanitizer
             return answer;
         }
 
-        var lines = List.of(answer.replace("\r\n", "\n").replace("\r", "\n").split("\n", -1)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        var lines = List.of(answer.replace("\r\n", "\n").replace("\r", "\n").split("\n", -1)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
         var body = unwrapFence(lines);
         var summary = findSummaryLine(body);
         var message = String.join("\n", summary < 0 ? body : body.subList(summary, body.size())).trim(); //$NON-NLS-1$
