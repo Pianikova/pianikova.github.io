@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,6 +26,7 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTools;
+import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ITextPreprocessor;
 import com.e1c.edt.ai.assistent.model.McpToolCalls;
@@ -36,6 +38,14 @@ import com.google.inject.Provider;
 public class IdeApiHandler
 {
     private static final String AI_CHAT = "AI Chat"; //$NON-NLS-1$
+
+    /**
+     * Single key under which the chat client stores its entire UI-prefs blob, persisted via
+     * {@link ISettingsStore} so the value survives EDT restarts (the JFX WebView wipes
+     * localStorage on every IDE launch).
+     */
+    private static final String UI_PREFS_KEY = "cgw-ui-prefs"; //$NON-NLS-1$
+
     private final ILog log;
     private final IUI ui;
     private final IDispatcher dispatcher;
@@ -50,6 +60,7 @@ public class IdeApiHandler
     private final IWeb web;
     private final IEditRollback editRollback;
     private final IWorkmateLocations locations;
+    private final ISettingsStore settingsStore;
     private boolean isReady;
 
     @Inject
@@ -57,7 +68,7 @@ public class IdeApiHandler
         Provider<IChat> chatProvider, IJson json,
         IMcpTools mcpTools, IEdtLinkHandler linkHandler, IEditorPositionManager editorPositionManager,
         IDiffPreviewOpener diffPreviewOpener, IMarkdownUtils markdownUtils, IWeb web, IEditRollback editRollback,
-        IWorkmateLocations locations)
+        IWorkmateLocations locations, ISettingsStore settingsStore)
     {
         Preconditions.checkNotNull(locations);
         Preconditions.checkNotNull(log);
@@ -73,6 +84,7 @@ public class IdeApiHandler
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(web);
         Preconditions.checkNotNull(editRollback);
+        Preconditions.checkNotNull(settingsStore);
         this.log = log;
         this.ui = ui;
         this.dispatcher = dispatcher;
@@ -87,6 +99,7 @@ public class IdeApiHandler
         this.web = web;
         this.editRollback = editRollback;
         this.locations = locations;
+        this.settingsStore = settingsStore;
     }
 
     public void wink(String parameter)
@@ -223,6 +236,31 @@ public class IdeApiHandler
         // Decode URL-encoded characters (e.g., %3A -> :, %D0 -> Cyrillic letters)
         var decodedHref = markdownUtils.decodeUrl(safeHref);
 
+        // Intercept file:// URLs that resolve to an existing directory and open them via
+        // Desktop.open(File) (via IWeb). On Windows, Desktop.browse(URI) delegates to
+        // ShellExecute, which decodes percent-encoded bytes as ANSI (cp1251) rather than UTF-8,
+        // so paths containing non-ASCII characters (e.g. Cyrillic) cannot be resolved.
+        // Desktop.open bypasses the URI parsing layer and delivers the path to the OS in its
+        // native encoding.
+        if (decodedHref.startsWith("file://")) //$NON-NLS-1$
+        {
+            // decodedHref is already fully percent-decoded above, so extract the path with a
+            // plain substring rather than re-parsing as a URI (which would reject the now-literal
+            // spaces/non-ASCII characters). Strip the extra leading slash that precedes a Windows
+            // drive letter in the file:///C:/... form; a file://host/share UNC form has none.
+            var path = decodedHref.substring("file://".length()); //$NON-NLS-1$
+            if (path.length() >= 3 && path.charAt(0) == '/' && path.charAt(2) == ':')
+            {
+                path = path.substring(1);
+            }
+            var directory = new File(path);
+            if (directory.isDirectory())
+            {
+                web.open(directory);
+                return true;
+            }
+        }
+
         // Diff-preview links (edt-diff://<token>) open a dedicated read-only compare view. Handled
         // before the drive-letter colon re-escaping below, which is specific to edt-file:// paths.
         if (linkHandler.isDiffHref(decodedHref))
@@ -263,6 +301,44 @@ public class IdeApiHandler
         });
 
         return true;
+    }
+
+    /**
+     * Reads a persisted UI setting by {@code key}. Returns {@code null} when the key has never
+     * been written — the JS side treats that as "first run" and falls back to default UI prefs.
+     * <p>
+     * Called from JavaScript via {@code window.ideApi.readSetting(key)}.
+     *
+     * @param key setting key (only {@link #UI_PREFS_KEY} is currently accepted)
+     * @return the stored JSON-encoded value, or {@code null} if absent or on error
+     */
+    public String readSetting(String key)
+    {
+        if (!UI_PREFS_KEY.equals(key))
+        {
+            return null;
+        }
+        return settingsStore.getString(key).orElse(null);
+    }
+
+    /**
+     * Persists a UI setting under {@code key} via {@link ISettingsStore}, so the chat client's UI
+     * prefs survive EDT restarts (the JFX WebView wipes localStorage on every IDE launch
+     * otherwise).
+     * <p>
+     * Called from JavaScript via {@code window.ideApi.writeSetting(key, value)} on every UI-prefs
+     * change (debounced on the JS side).
+     *
+     * @param key setting key (only {@link #UI_PREFS_KEY} is currently accepted; others are ignored)
+     * @param value JSON-encoded value; {@code null} is ignored (no-op)
+     */
+    public void writeSetting(String key, String value)
+    {
+        if (!UI_PREFS_KEY.equals(key) || value == null)
+        {
+            return;
+        }
+        settingsStore.setString(key, value);
     }
 
     /**
