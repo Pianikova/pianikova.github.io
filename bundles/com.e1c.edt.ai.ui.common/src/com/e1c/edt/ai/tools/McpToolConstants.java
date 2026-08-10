@@ -49,4 +49,20 @@ public final class McpToolConstants
 
     /** Default maximum number of navigation history entries */
     public static final int DEFAULT_MAX_NAVIGATION_ENTRIES = 20;
+
+    // SVG operations
+    /** Hard cap on SVG markup length in characters; larger input is rejected before parsing */
+    public static final int SVG_MAX_SOURCE_CHARS = 262144;
+
+    /** Hard cap on the number of elements in one SVG document */
+    public static final int SVG_MAX_ELEMENTS = 5000;
+
+    /** Maximum size in bytes of sanitized SVG that is embedded inline in the chat as a data URI */
+    public static final int SVG_MAX_PREVIEW_BYTES = 65536;
+
+    /** Size advertised to the model as the recommended maximum, in bytes */
+    public static final int SVG_RECOMMENDED_MAX_BYTES = 32768;
+
+    /** Maximum number of diagnostics listed back to the model */
+    public static final int SVG_MAX_DIAGNOSTICS = 20;
 }

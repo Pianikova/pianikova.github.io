@@ -13,9 +13,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
@@ -328,30 +326,7 @@ public class WriteMcpTool
 
     private void createParentFolders(IFile file, IProgressMonitor monitor) throws CoreException
     {
-        IContainer container = file.getParent();
-        if (container instanceof IFolder && !container.exists())
-        {
-            createFolderRecursive((IFolder)container, monitor);
-        }
-    }
-
-    private void createFolderRecursive(IFolder folder, IProgressMonitor monitor) throws CoreException
-    {
-        if (folder == null || folder.exists())
-        {
-            return;
-        }
-
-        IContainer parent = folder.getParent();
-        if (parent instanceof IFolder)
-        {
-            createFolderRecursive((IFolder)parent, monitor);
-        }
-
-        if (!folder.exists())
-        {
-            folder.create(true, true, monitor);
-        }
+        WorkspaceFileWriter.createParentFolders(file, monitor);
     }
 
     /**
@@ -363,11 +338,7 @@ public class WriteMcpTool
      */
     private void refreshResources(IFile file, IProgressMonitor monitor) throws CoreException
     {
-        file.refreshLocal(IResource.DEPTH_ZERO, monitor);
-        if (file.getParent() != null)
-        {
-            file.getParent().refreshLocal(IResource.DEPTH_ONE, monitor);
-        }
+        WorkspaceFileWriter.refreshResources(file, monitor);
     }
 
     /**
@@ -378,14 +349,7 @@ public class WriteMcpTool
      */
     private void refreshResourcesSafe(IFile file, IProgressMonitor monitor)
     {
-        try
-        {
-            refreshResources(file, monitor);
-        }
-        catch (CoreException error)
-        {
-            log.logError(error);
-        }
+        WorkspaceFileWriter.refreshResourcesSafe(file, monitor, log);
     }
 
     private static boolean isRestrictedFile(String path)

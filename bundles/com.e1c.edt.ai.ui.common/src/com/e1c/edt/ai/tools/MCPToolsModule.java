@@ -42,6 +42,7 @@ public class MCPToolsModule
         toolBinder.addBinding().to(LocalChangesMcpTool.class);
         toolBinder.addBinding().to(NavigationHistoryMcpTool.class);
         toolBinder.addBinding().to(WriteMcpTool.class);
+        toolBinder.addBinding().to(SvgMcpTool.class);
         toolBinder.addBinding().to(EditMcpTool.class);
         toolBinder.addBinding().to(DeleteMcpTool.class);
         toolBinder.addBinding().to(GetMarkersMcpTool.class);
@@ -73,6 +74,7 @@ public class MCPToolsModule
         bind(IReplacements.class).to(Replacements.class).in(Singleton.class);
         bind(IContentReplacer.class).to(ContentReplacer.class).in(Singleton.class);
         bind(IJGitCommonHelper.class).to(JGitCommonHelper.class).in(Singleton.class);
+        bind(ISvgSanitizer.class).to(SvgSanitizer.class).in(Singleton.class);
 
         // Replacement strategies
         var replacementStrategyBinder = Multibinder.newSetBinder(binder(), IReplacementStrategy.class);

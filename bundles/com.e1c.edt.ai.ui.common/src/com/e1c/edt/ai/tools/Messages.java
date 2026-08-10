@@ -34,6 +34,12 @@ public class Messages
     public static String EditedTemplate;
     public static String EditOpenDiffLink;
 
+    // SVG operations
+    public static String SvgSaveTitleTemplate;
+    public static String SvgCheckTitle;
+    public static String SvgPreviewTitleTemplate;
+    public static String SvgSavedTemplate;
+
     // Search operations
     public static String SearchTitleTemplate;
     public static String FindTemplate;
