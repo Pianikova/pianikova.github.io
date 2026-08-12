@@ -93,6 +93,7 @@ else
             <button class="language-button" @onclick="SwitchLanguageAsync" aria-label="@L["SwitchLanguage"]">@(_language == "ru" ? "EN" : "RU")</button>
         </nav>
     </header>
+    <div class="scroll-progress" aria-hidden="true"><span class="scroll-progress-value"></span></div>
 
     <main id="top">
         <section class="hero" aria-labelledby="hero-title">
@@ -412,13 +413,24 @@ else
     private bool _menuOpen;
     private bool _playFeatured;
     private bool _showFullBiography;
+    private bool _scrollEffectsInitialized;
     private int? _lightboxIndex;
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_content is not null && !_scrollEffectsInitialized)
+        {
+            await JS.InvokeVoidAsync("pianikovaScrollEffects.initialize");
+            _scrollEffectsInitialized = true;
+        }
+    }
+
     private async Task LoadAsync()
     {
         _error = null;
+        _scrollEffectsInitialized = false;
         try
         {
             var settings = await ContentSource.LoadSettingsAsync();

@@ -30,16 +30,14 @@ internal sealed class SiteContentSource(HttpClient httpClient, NavigationManager
             culture = settings.DefaultLanguage;
         }
 
-        var siteTask = ReadAsync<SiteDocument>($"site/{culture}/site.json", cancellationToken);
-        var scheduleTask = ReadAsync<ScheduleDocument>($"schedule/{culture}/schedule.json", cancellationToken);
-        var videosTask = ReadAsync<VideosDocument>($"videos/{culture}/videos.json", cancellationToken);
-        var photosTask = ReadAsync<PhotosDocument>($"photos/{culture}/photos.json", cancellationToken);
-        await Task.WhenAll(siteTask, scheduleTask, videosTask, photosTask);
-
-        var site = await siteTask;
-        var schedule = await scheduleTask;
-        var videos = await videosTask;
-        var photos = await photosTask;
+        // Browser fetch implementations may occasionally return an empty body when
+        // several static JSON files are requested concurrently during a language
+        // change. These files are small, so deterministic sequential reads are both
+        // fast enough and more reliable across desktop and mobile browsers.
+        var site = await ReadAsync<SiteDocument>($"site/{culture}/site.json", cancellationToken);
+        var schedule = await ReadAsync<ScheduleDocument>($"schedule/{culture}/schedule.json", cancellationToken);
+        var videos = await ReadAsync<VideosDocument>($"videos/{culture}/videos.json", cancellationToken);
+        var photos = await ReadAsync<PhotosDocument>($"photos/{culture}/photos.json", cancellationToken);
         return Map(settings, site, schedule, videos, photos);
     }
 
@@ -58,6 +56,14 @@ internal sealed class SiteContentSource(HttpClient httpClient, NavigationManager
     {
         var path = $"{ContentRoot}{relativePath}";
         var json = await httpClient.GetStringAsync(path, cancellationToken);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            // Retry once with a unique URL so neither the HTTP cache nor a service
+            // worker can replay an incomplete response.
+            var separator = path.Contains('?', StringComparison.Ordinal) ? '&' : '?';
+            json = await httpClient.GetStringAsync($"{path}{separator}retry={Guid.NewGuid():N}", cancellationToken);
+        }
+
         if (string.IsNullOrWhiteSpace(json))
         {
             throw new InvalidOperationException($"Content file content/{relativePath} is empty.");

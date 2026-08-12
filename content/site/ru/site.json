@@ -40,7 +40,7 @@
       "title": "Историческое исполнительство",
       "description": "В сфере интересов Юлии — исторически информированное исполнительство (HIP) музыки барокко, классицизма и раннего романтизма. Она играет на аутентичных инструментах (барочная скрипка и виоль д'амур) в сольных программах и ансамблях.",
       "image": {
-        "path": "media/images/historical-performance-viola-damore.png",
+        "path": "media/images/historical-performance-viola-damore.jpg",
         "alt": "Виола д’амур",
         "credit": "",
         "usage": "web"
@@ -51,7 +51,7 @@
       "title": "Дуэт Арфы и Скрипки",
       "description": "Камерные концертные вечера в ансамбле с лауреатом международных конкурсов, арфисткой Софьей Москалёвой",
       "image": {
-        "path": "media/images/duet-sofia-moskaleva-horizontal.png",
+        "path": "media/images/duet-sofia-moskaleva-horizontal.jpg",
         "alt": "Софья Москалёва с арфой и Юлия Пьяникова со скрипкой",
         "credit": "",
         "usage": "web"
@@ -62,7 +62,7 @@
       "title": "КАТАВАСИС — блог о музыке",
       "description": "Будни классического музыканта:\nВы сооружали в детстве «секретики»? Складывали сокровенные безделушки и любопытные вещи в тайник под цветным стеклом во дворе? Анонсы концертов, интересные истории о музыке и так далее.\n\n[Читать блог в Telegram](https://t.me/gattavasis)",
       "image": {
-        "path": "media/images/katavasis-blog.png",
+        "path": "media/images/katavasis-blog.jpg",
         "alt": "Юлия Пьяникова со скрипкой перед выступлением",
         "credit": "",
         "usage": "web"

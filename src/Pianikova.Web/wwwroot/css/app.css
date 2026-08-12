@@ -18,19 +18,23 @@ a { color: inherit; }
 img { display: block; max-width: 100%; }
 button:focus-visible, a:focus-visible { outline: 3px solid #d496a0; outline-offset: 4px; }
 
-.site-header { position: absolute; inset: 0 0 auto; z-index: 20; display: flex; align-items: center; justify-content: space-between; min-height: 92px; padding: 20px clamp(24px, 5vw, 88px); color: var(--paper); }
+.site-header { position: fixed; inset: 0 0 auto; z-index: 20; display: flex; align-items: center; justify-content: space-between; min-height: 92px; padding: 20px clamp(24px, 5vw, 88px); color: var(--paper); transition: min-height .35s ease, padding .35s ease, background-color .35s ease, box-shadow .35s ease, backdrop-filter .35s ease; }
+.site-header.is-scrolled { min-height: 68px; padding-block: 10px; background: rgba(17,17,17,.9); box-shadow: 0 8px 30px rgba(0,0,0,.16); backdrop-filter: blur(14px); }
 .wordmark { display: flex; flex-direction: column; text-transform: uppercase; text-decoration: none; letter-spacing: .1em; line-height: 1.1; }
 .wordmark span { font-family: var(--serif); font-size: 21px; }
 .wordmark small { margin-top: 6px; color: rgba(243,239,231,.65); font-size: 10px; letter-spacing: .28em; }
 .main-nav { display: flex; align-items: center; gap: clamp(18px, 2.6vw, 44px); }
 .main-nav a, .language-button { min-height: 44px; display: inline-flex; align-items: center; color: inherit; background: none; border: 0; text-decoration: none; font-size: 14px; letter-spacing: .04em; cursor: pointer; }
-.main-nav a:hover { color: #d6b3a0; }
+.main-nav a { position: relative; }
+.main-nav a::after { content: ""; position: absolute; inset: auto 0 5px; height: 1px; background: #d6b3a0; transform: scaleX(0); transform-origin: left; transition: transform .3s ease; }
+.main-nav a:hover, .main-nav a.active { color: #d6b3a0; }
+.main-nav a:hover::after, .main-nav a.active::after { transform: scaleX(1); }
 .language-button { padding: 0 0 0 18px; border-left: 1px solid rgba(243,239,231,.3); }
 .menu-toggle { display: none; color: inherit; background: transparent; border: 1px solid rgba(243,239,231,.4); min-width: 72px; min-height: 44px; }
 
 .hero { position: relative; min-height: min(920px, 96vh); color: var(--paper); background: var(--ink); overflow: hidden; }
-.hero-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: right top; }
-.hero-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(7,7,7,.96) 0%, rgba(7,7,7,.76) 30%, rgba(7,7,7,.18) 65%, rgba(7,7,7,.28) 100%); }
+.hero-image { position: absolute; inset: -42px 0 0; width: 100%; height: calc(100% + 84px); object-fit: cover; object-position: right top; transform: translate3d(0, var(--hero-parallax, 0), 0) scale(1.015); will-change: transform; }
+.hero-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(7,7,7,.96) 0%, rgba(7,7,7,.76) 30%, rgba(7,7,7,.18) 65%, rgba(7,7,7,.28) 100%); transform: translate3d(0, var(--hero-shade-parallax, 0), 0); }
 .hero-content { position: relative; z-index: 2; display: flex; flex-direction: column; justify-content: center; min-height: min(920px, 96vh); width: min(720px, 54vw); padding: 130px 0 70px clamp(24px, 7vw, 120px); }
 .eyebrow { margin: 0 0 16px; text-transform: uppercase; font-size: 12px; font-weight: 650; letter-spacing: .22em; }
 .hero h1 { margin: 0; font-family: var(--serif); font-size: clamp(66px, 9vw, 142px); font-weight: 400; line-height: .78; letter-spacing: -.055em; text-transform: uppercase; }
@@ -40,6 +44,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d496a0; outline-offs
 .button-primary { color: var(--paper); background: var(--wine); }
 .button-primary:hover { background: #8b3543; }
 .button-quiet { color: inherit; border-bottom-color: currentColor; }
+.scroll-progress { position: fixed; z-index: 40; inset: 0 0 auto; height: 2px; pointer-events: none; }
+.scroll-progress-value { display: block; width: 100%; height: 100%; background: #d6b3a0; transform: scaleX(0); transform-origin: left; will-change: transform; }
 
 .section-pad { padding-inline: clamp(24px, 7vw, 120px); }
 .next-concert { display: grid; grid-template-columns: 160px 1.1fr 1.7fr auto; align-items: center; gap: clamp(28px, 5vw, 86px); min-height: 260px; padding-block: 48px; border-bottom: 1px solid var(--line); }
@@ -135,6 +141,13 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d496a0; outline-offs
 .markdown-content > :last-child { margin-bottom: 0; }
 .markdown-content h1, .markdown-content h2, .markdown-content h3 { font-family: var(--serif); font-weight: 400; line-height: 1.15; }
 .markdown-content a { text-underline-offset: 4px; }
+.markdown-content a { text-decoration-thickness: 1px; text-decoration-color: rgba(116,44,55,.45); transition: color .25s ease, text-decoration-color .25s ease; }
+.markdown-content a:hover { color: var(--wine); text-decoration-color: currentColor; }
+
+.scroll-effects-ready .reveal-on-scroll { opacity: 0; transform: translate3d(0, 22px, 0); transition: opacity .7s ease var(--reveal-delay, 0ms), transform .7s cubic-bezier(.2,.7,.2,1) var(--reveal-delay, 0ms); }
+.scroll-effects-ready .reveal-on-scroll.is-visible { opacity: 1; transform: translate3d(0, 0, 0); }
+.scroll-effects-ready .project-card img { transition: transform .8s cubic-bezier(.2,.7,.2,1); }
+.scroll-effects-ready .project-card.is-visible img { transform: scale(1.012); }
 
 .concerts .section-heading { align-items: start; }
 .concert-list { border-top: 1px solid var(--ink); }
@@ -179,7 +192,9 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d496a0; outline-offs
 @media (max-width: 1180px) {
     .site-header { min-height: 76px; padding-block: 14px; }
     .menu-toggle { display: block; }
+    .site-header.is-scrolled { min-height: 64px; }
     .main-nav { position: fixed; inset: 76px 0 0; display: none; flex-direction: column; justify-content: center; gap: 18px; color: var(--paper); background: rgba(17,17,17,.98); }
+    .site-header.is-scrolled .main-nav { inset-block-start: 64px; }
     .menu-open .main-nav { display: flex; }
     .main-nav a, .language-button { font-family: var(--serif); font-size: 30px; }
     .language-button { border: 0; padding: 0; }
@@ -187,7 +202,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d496a0; outline-offs
 
 @media (max-width: 900px) {
     .hero { min-height: 0; }
-    .hero-image { position: static; width: 100%; height: auto; aspect-ratio: 4 / 5; object-position: 92% center; }
+    .hero-image { position: static; width: 100%; height: auto; aspect-ratio: 4 / 5; object-position: 92% center; transform: none; will-change: auto; }
     .hero-shade { display: none; }
     .hero-content { position: static; justify-content: flex-start; min-height: 0; width: 100%; padding: 40px 24px 64px; }
     .hero-content .eyebrow, .hero-content h1 { display: none; }
@@ -227,6 +242,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d496a0; outline-offs
     .performance-poster { aspect-ratio: 4 / 5; }
     .performance-poster img { object-position: center; }
     .project-grid { grid-template-columns: 1fr; }
+    .scroll-effects-ready .reveal-on-scroll { transform: translate3d(0, 16px, 0); transition-duration: .55s; }
+    .scroll-effects-ready .project-card.is-visible img { transform: none; }
     .biography blockquote { font-size: 43px; }
     .concert-row { grid-template-columns: 90px 1fr; gap: 20px; padding-block: 26px; }
     .past-concerts .concert-row { grid-template-columns: 90px 1fr; }
@@ -240,6 +257,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d496a0; outline-offs
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+    .hero-image, .hero-shade, .reveal-on-scroll, .project-card img { transform: none !important; transition: none !important; }
+    .reveal-on-scroll { opacity: 1 !important; }
 }
 
 @media print {
