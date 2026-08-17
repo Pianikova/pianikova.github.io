@@ -1,11 +1,12 @@
-const cacheName = "pianikova-app-v1";
+const cacheName = "pianikova-app-v2";
 const appShell = [
   "./",
   "./index.html",
   "./css/app.css",
-  "./app-icon.svg",
-  "./app-icon-192.png",
-  "./app-icon-512.png",
+  "./app-icon.svg?v=2",
+  "./app-icon-192.png?v=2",
+  "./app-icon-512.png?v=2",
+  "./app-icon-maskable-512.png?v=2",
   "./site.webmanifest"
 ];
 
