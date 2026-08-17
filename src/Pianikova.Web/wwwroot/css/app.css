@@ -261,14 +261,23 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d496a0; outline-offs
     .reveal-on-scroll { opacity: 1 !important; }
 }
 
+.print-host { display: none; }
+
 @media print {
     @page { margin: 18mm; }
     body.printing-document { background: white; }
-    body.printing-document * { visibility: hidden !important; }
-    body.printing-document .print-target, body.printing-document .print-target * { visibility: visible !important; }
-    body.printing-document .print-target { position: absolute; inset: 0 auto auto 0; width: 100%; max-width: none; color: #111; }
-    body.printing-document .print-target [data-print-hidden] { display: none !important; }
-    body.printing-document .document-content { color: #111; }
+    body.printing-document > * { display: none !important; }
+    body.printing-document > .print-host { display: block !important; width: 100%; color: #111; }
+    body.printing-document .print-host [data-print-hidden] { display: none !important; }
+    body.printing-document .print-host .markdown-document { width: 100%; max-width: none; margin: 0; }
+    body.printing-document .print-host .document-content { color: #111; }
+    body.printing-document .print-host h1,
+    body.printing-document .print-host h2,
+    body.printing-document .print-host h3 { break-after: avoid-page; }
+    body.printing-document .print-host blockquote,
+    body.printing-document .print-host pre,
+    body.printing-document .print-host table,
+    body.printing-document .print-host img { break-inside: avoid-page; }
 }
 
 /* Admin editor (/admin) */

@@ -7,15 +7,25 @@ window.pianikovaDocuments = {
     print: function (id) {
         const element = document.getElementById(id);
         if (!element) return;
-        element.classList.add("print-target");
+
+        const printHost = document.createElement("div");
+        printHost.className = "print-host";
+        printHost.setAttribute("aria-hidden", "true");
+        printHost.appendChild(element.cloneNode(true));
+        document.body.appendChild(printHost);
         document.body.classList.add("printing-document");
+
+        let cleanedUp = false;
         const cleanup = function () {
+            if (cleanedUp) return;
+            cleanedUp = true;
             document.body.classList.remove("printing-document");
-            element.classList.remove("print-target");
+            printHost.remove();
             window.removeEventListener("afterprint", cleanup);
         };
+
         window.addEventListener("afterprint", cleanup);
         window.print();
-        window.setTimeout(cleanup, 1000);
+        window.setTimeout(cleanup, 60000);
     }
 };
