@@ -178,6 +178,16 @@
                         </div>
                         <div class="admin-field"><label>Дата публикации</label><input type="date" @bind="_pressQuotes[index].PublishedAt" /></div>
                         <div class="admin-field"><label>Ссылка на источник</label><input @bind="_pressQuotes[index].SourceUrl" /></div>
+                        @for (var j = 0; j < _pressQuotes[index].Links.Count; j++)
+                        {
+                            var linkIndex = j;
+                            <div class="admin-list-item">
+                                <div class="admin-field"><label>Сервис (VK, Instagram, Telegram, YouTube)</label><input @bind="_pressQuotes[index].Links[linkIndex].Service" /></div>
+                                <div class="admin-field"><label>Ссылка</label><input @bind="_pressQuotes[index].Links[linkIndex].Url" /></div>
+                                <button type="button" class="button button-quiet" @onclick="() => _pressQuotes[index].Links.RemoveAt(linkIndex)">Удалить ссылку</button>
+                            </div>
+                        }
+                        <button type="button" class="button button-quiet" @onclick="() => _pressQuotes[index].Links.Add(new SocialLinkEdit())">Добавить ссылку с иконкой</button>
                     </div>
                 }
                 <button type="button" class="button" @onclick="AddPressQuote">Добавить цитату</button>
@@ -310,7 +320,8 @@
                 PublicationEn = quoteEn.Publication, PublicationRu = quoteRu.Publication,
                 AuthorEn = quoteEn.Author, AuthorRu = quoteRu.Author,
                 PublishedAt = quoteEn.PublishedAt,
-                SourceUrl = quoteEn.SourceUrl
+                SourceUrl = quoteEn.SourceUrl,
+                Links = (quoteEn.Links ?? []).Select(x => new SocialLinkEdit { Service = x.Service, Url = x.Url }).ToList()
             });
         }
         _pressKitPath = en.Press.PressKitPath;
@@ -467,12 +478,17 @@
         public string AuthorRu { get; set; } = "";
         public DateOnly PublishedAt { get; set; } = DateOnly.FromDateTime(DateTime.Today);
         public string SourceUrl { get; set; } = "";
+        public List<SocialLinkEdit> Links { get; set; } = [];
 
         public PressQuoteDocument ToDocument(string language) => new(
             language == "ru" ? TextRu : TextEn,
             language == "ru" ? PublicationRu : PublicationEn,
             language == "ru" ? AuthorRu : AuthorEn,
             PublishedAt,
-            SourceUrl.Trim());
+            SourceUrl.Trim(),
+            Links
+                .Select(x => new ExternalLink(x.Service.Trim(), x.Url.Trim()))
+                .Where(x => x.Service.Length > 0 && x.Url.Length > 0)
+                .ToArray());
     }
 }

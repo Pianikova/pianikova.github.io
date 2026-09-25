@@ -97,7 +97,7 @@ internal sealed class SiteContentSource(HttpClient httpClient, NavigationManager
         Text(site.Repertoire),
         site.Projects.Select(Project).ToArray(),
         new PressContent(
-            site.Press.Quotes.Select(x => new PressQuote(Text(x.Text), x.Publication, x.Author, x.PublishedAt, x.SourceUrl)).ToArray(),
+            site.Press.Quotes.Select(x => new PressQuote(Text(x.Text), x.Publication, x.Author, x.PublishedAt, x.SourceUrl, x.Links ?? [])).ToArray(),
             site.Press.PressKitPath,
             site.Press.PhotosPath),
         new ContactContent(site.Contacts.GeneralEmail, site.Contacts.ManagementEmail, site.Contacts.PressEmail, site.Contacts.SocialLinks));

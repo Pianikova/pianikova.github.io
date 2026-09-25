@@ -360,6 +360,15 @@ else
                                 {
                                     @quote.Publication
                                 }
+                                @if (quote.Links.Count > 0)
+                                {
+                                    <span class="press-links">
+                                        @foreach (var link in quote.Links)
+                                        {
+                                            <a href="@link.Url" target="_blank" rel="noopener" title="@link.Service" aria-label="@link.Service"><ServiceIcon Service="@link.Service" /></a>
+                                        }
+                                    </span>
+                                }
                                 @if (!string.IsNullOrWhiteSpace(quote.Author))
                                 {
                                     <span> · @quote.Author</span>

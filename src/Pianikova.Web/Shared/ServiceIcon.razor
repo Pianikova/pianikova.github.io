@@ -1,0 +1,31 @@
+<svg class="service-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    @switch (Service.Trim().ToLowerInvariant())
+    {
+        case "vk":
+        case "vkontakte":
+        case "вконтакте":
+            <rect x="2.5" y="2.5" width="19" height="19" rx="5" />
+            <path d="M6.5 9l2.5 6 2.5-6" />
+            <path d="M13.5 9v6M17.5 9l-4 3 4 3" />
+            break;
+        case "instagram":
+            <rect x="3" y="3" width="18" height="18" rx="5" />
+            <circle cx="12" cy="12" r="4" />
+            <circle cx="17.3" cy="6.7" r=".6" fill="currentColor" stroke="none" />
+            break;
+        case "telegram":
+            <path d="M21 4L3 11l6 2.5M21 4l-3 16-9-6.5M21 4L9 13.5V19l3-3.5" />
+            break;
+        case "youtube":
+            <rect x="2.5" y="5.5" width="19" height="13" rx="4" />
+            <path d="M10 9.5v5l4.5-2.5z" fill="currentColor" />
+            break;
+        default:
+            <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+            break;
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public string Service { get; set; } = "";
+}
