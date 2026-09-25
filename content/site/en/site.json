@@ -175,7 +175,8 @@
     "socialLinks": [
       { "service": "Telegram", "url": "https://t.me/gattavasis" },
       { "service": "Instagram", "url": "https://www.instagram.com/julia_pianikova" },
-      { "service": "YouTube", "url": "https://youtube.com/@juliapianikova" }
+      { "service": "YouTube", "url": "https://youtube.com/@juliapianikova" },
+      { "service": "VK", "url": "https://vk.ru/julia_pianikova" }
     ]
   }
 }
