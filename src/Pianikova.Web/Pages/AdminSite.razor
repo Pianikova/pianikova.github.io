@@ -191,6 +191,32 @@
                     </div>
                 }
                 <button type="button" class="button" @onclick="AddPressQuote">Добавить цитату</button>
+                <h3>Анонсы и упоминания</h3>
+                @for (var i = 0; i < _pressMentions.Count; i++)
+                {
+                    var index = i;
+                    <div class="admin-list-item">
+                        <div class="admin-list-item-head">
+                            <strong>@(_pressMentions[index].TitleRu.Length > 0 ? _pressMentions[index].TitleRu : "Новое упоминание")</strong>
+                            <button type="button" class="button button-quiet" @onclick="() => _pressMentions.RemoveAt(index)">Удалить</button>
+                        </div>
+                        <div class="admin-locales">
+                            <div>
+                                <span class="admin-eyebrow">English</span>
+                                <div class="admin-field"><label>Заголовок</label><input @bind="_pressMentions[index].TitleEn" /></div>
+                                <div class="admin-field"><label>Издание</label><input @bind="_pressMentions[index].PublicationEn" /></div>
+                            </div>
+                            <div>
+                                <span class="admin-eyebrow">Русский</span>
+                                <div class="admin-field"><label>Заголовок</label><input @bind="_pressMentions[index].TitleRu" /></div>
+                                <div class="admin-field"><label>Издание</label><input @bind="_pressMentions[index].PublicationRu" /></div>
+                            </div>
+                        </div>
+                        <div class="admin-field"><label>Дата</label><input type="date" @bind="_pressMentions[index].Date" /></div>
+                        <div class="admin-field"><label>Ссылка</label><input @bind="_pressMentions[index].Url" /></div>
+                    </div>
+                }
+                <button type="button" class="button" @onclick="() => _pressMentions.Add(new PressMentionEdit())">Добавить упоминание</button>
                 <div class="admin-field"><label>Путь к пресс-киту</label><input @bind="_pressKitPath" /></div>
                 <div class="admin-field"><label>Путь к фотографиям для прессы</label><input @bind="_pressPhotosPath" /></div>
             </div>
@@ -248,6 +274,7 @@
     private string _repertoireEn = "", _repertoireRu = "";
     private string _cvPath = "";
     private string _pressKitPath = "", _pressPhotosPath = "";
+    private readonly List<PressMentionEdit> _pressMentions = [];
     private string _generalEmail = "", _managementEmail = "", _pressEmail = "";
     private readonly List<ProjectEdit> _projects = [];
     private readonly List<PressQuoteEdit> _pressQuotes = [];
@@ -326,6 +353,21 @@
         }
         _pressKitPath = en.Press.PressKitPath;
         _pressPhotosPath = en.Press.PhotosPath;
+        _pressMentions.Clear();
+        var mentionsEn = en.Press.Mentions ?? [];
+        var mentionsRu = ru.Press.Mentions ?? [];
+        for (var i = 0; i < mentionsEn.Count; i++)
+        {
+            var mentionEn = mentionsEn[i];
+            var mentionRu = i < mentionsRu.Count ? mentionsRu[i] : mentionEn;
+            _pressMentions.Add(new PressMentionEdit
+            {
+                TitleEn = mentionEn.Title, TitleRu = mentionRu.Title,
+                PublicationEn = mentionEn.Publication, PublicationRu = mentionRu.Publication,
+                Date = mentionEn.Date,
+                Url = mentionEn.Url
+            });
+        }
         _generalEmail = en.Contacts.GeneralEmail;
         _managementEmail = en.Contacts.ManagementEmail;
         _pressEmail = en.Contacts.PressEmail;
@@ -386,6 +428,8 @@
             var projectsEn = _projects.Where(x => !string.IsNullOrWhiteSpace(x.Id)).Select(x => x.ToDocument("en")).ToArray();
             var projectsRu = _projects.Where(x => !string.IsNullOrWhiteSpace(x.Id)).Select(x => x.ToDocument("ru")).ToArray();
             var pressQuotesEn = _pressQuotes.Where(x => !string.IsNullOrWhiteSpace(x.TextEn)).Select(x => x.ToDocument("en")).ToArray();
+            var pressMentionsEn = _pressMentions.Where(x => !string.IsNullOrWhiteSpace(x.Url)).Select(x => x.ToDocument("en")).ToArray();
+            var pressMentionsRu = _pressMentions.Where(x => !string.IsNullOrWhiteSpace(x.Url)).Select(x => x.ToDocument("ru")).ToArray();
             var pressQuotesRu = _pressQuotes.Where(x => !string.IsNullOrWhiteSpace(x.TextRu)).Select(x => x.ToDocument("ru")).ToArray();
 
             var updatedEn = _originalEn with
@@ -396,7 +440,7 @@
                 Biography = new BiographyDocument(_quoteEn, _summaryEn, _fullEn, _cvPath, today),
                 Repertoire = _repertoireEn,
                 Projects = projectsEn,
-                Press = new PressDocument(pressQuotesEn, _pressKitPath, _pressPhotosPath),
+                Press = new PressDocument(pressQuotesEn, _pressKitPath, _pressPhotosPath, pressMentionsEn),
                 Contacts = new ContactDocument(_generalEmail, _managementEmail, _pressEmail, socialLinks),
             };
             var updatedRu = _originalRu with
@@ -407,7 +451,7 @@
                 Biography = new BiographyDocument(_quoteRu, _summaryRu, _fullRu, _cvPath, today),
                 Repertoire = _repertoireRu,
                 Projects = projectsRu,
-                Press = new PressDocument(pressQuotesRu, _pressKitPath, _pressPhotosPath),
+                Press = new PressDocument(pressQuotesRu, _pressKitPath, _pressPhotosPath, pressMentionsRu),
                 Contacts = new ContactDocument(_generalEmail, _managementEmail, _pressEmail, socialLinks),
             };
 
@@ -466,6 +510,22 @@
                 language == "ru" ? ImageAltRu : ImageAltEn,
                 language == "ru" ? ImageCreditRu : ImageCreditEn,
                 "web"));
+    }
+
+    private sealed class PressMentionEdit
+    {
+        public string TitleEn { get; set; } = "";
+        public string TitleRu { get; set; } = "";
+        public string PublicationEn { get; set; } = "";
+        public string PublicationRu { get; set; } = "";
+        public DateOnly Date { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+        public string Url { get; set; } = "";
+
+        public PressMentionDocument ToDocument(string language) => new(
+            (language == "ru" ? TitleRu : TitleEn).Trim(),
+            (language == "ru" ? PublicationRu : PublicationEn).Trim(),
+            Date,
+            Url.Trim());
     }
 
     private sealed class PressQuoteEdit

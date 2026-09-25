@@ -43,8 +43,9 @@ public sealed record ProgramWork(string Composer, LocalizedText Work);
 public sealed record ConcertArtist(LocalizedText Role, LocalizedText Name);
 public sealed record Biography(LocalizedText Quote, LocalizedText Summary, LocalizedText Full, string CvPath, DateOnly UpdatedAt);
 public sealed record ArtisticProject(string Id, LocalizedText Title, LocalizedText Description, MediaAsset Image);
-public sealed record PressContent(IReadOnlyList<PressQuote> Quotes, string PressKitPath, string PhotosPath);
+public sealed record PressContent(IReadOnlyList<PressQuote> Quotes, IReadOnlyList<PressMention> Mentions, string PressKitPath, string PhotosPath);
 public sealed record PressQuote(LocalizedText Text, string Publication, string Author, DateOnly PublishedAt, string SourceUrl, IReadOnlyList<ExternalLink> Links);
+public sealed record PressMention(LocalizedText Title, string Publication, DateOnly Date, string Url);
 public sealed record ContactContent(string GeneralEmail, string ManagementEmail, string PressEmail, IReadOnlyList<ExternalLink> SocialLinks);
 public sealed record ExternalLink(string Service, string Url);
 
@@ -71,8 +72,9 @@ internal sealed record HeroDocument(string Statement, MediaAssetDocument Image);
 internal sealed record MediaAssetDocument(string Path, string Alt, string Credit, string Usage);
 internal sealed record BiographyDocument(string Quote, string Summary, string Full, string CvPath, DateOnly UpdatedAt);
 internal sealed record ArtisticProjectDocument(string Id, string Title, string Description, MediaAssetDocument Image);
-internal sealed record PressDocument(IReadOnlyList<PressQuoteDocument> Quotes, string PressKitPath, string PhotosPath);
+internal sealed record PressDocument(IReadOnlyList<PressQuoteDocument> Quotes, string PressKitPath, string PhotosPath, IReadOnlyList<PressMentionDocument>? Mentions = null);
 internal sealed record PressQuoteDocument(string Text, string Publication, string Author, DateOnly PublishedAt, string SourceUrl, IReadOnlyList<ExternalLink>? Links = null);
+internal sealed record PressMentionDocument(string Title, string Publication, DateOnly Date, string Url);
 internal sealed record ContactDocument(string GeneralEmail, string ManagementEmail, string PressEmail, IReadOnlyList<ExternalLink> SocialLinks);
 
 internal sealed record VideosDocument(string Id, DateOnly LastUpdated, IReadOnlyList<VideoDocument> Items);

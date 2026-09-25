@@ -72,6 +72,34 @@
   "press": {
     "quotes": [
       {
+        "text": "St Petersburg violinist Julia Pianikova made Alice the Fox and Basilio the Cat her heroes — in Igor Rogalyov’s apt words, “the violin was literally meowing in her hands”.",
+        "publication": "Sirius Educational Centre",
+        "author": "",
+        "publishedAt": "2016-06-21",
+        "sourceUrl": "https://sochisirius.ru/news/335"
+      },
+      {
+        "text": "Julia Pianikova was among the competition laureates performing at the classical music concert of the 16th International Cultural Festival “Flowers of Russia” in Düsseldorf.",
+        "publication": "Ministry of Culture of the Russian Federation",
+        "author": "",
+        "publishedAt": "2019-03-18",
+        "sourceUrl": "https://culture.gov.ru/press/news/dyusseldorf_vpervye_primet_mezhdunarodnyy_kulturnyy_festival_tsvety_rossii/"
+      },
+      {
+        "text": "The soloists of the 12th Kogan-Fest gala concert, Julia Pianikova among them, won the audience over with their virtuosity, passion and extraordinary energy.",
+        "publication": "Yaroslavl State Philharmonic",
+        "author": "",
+        "publishedAt": "2025-11-17",
+        "sourceUrl": "https://www.yar-filarmoniya.ru/zavershilsya-XII-mezhdunarodnyj-muzykalnyj-kogan-festival/"
+      },
+      {
+        "text": "Julia Pianikova took first place at the International Kogan-Fest in Yaroslavl, winning over both the jury and the audience together with the other laureates.",
+        "publication": "Muzykalnaya Zhizn",
+        "author": "Nadezhda Travina",
+        "publishedAt": "2025-11-18",
+        "sourceUrl": "https://muzlifemagazine.ru/chayka-zvezdy-i-skripka/"
+      },
+      {
         "text": "The Setouchi International Music Festival programme features leading Japanese cellist Dai Miyata and Russian violinist Julia Pianikova.",
         "publication": "COOL KAGAWA (Shikoku Shimbun)",
         "author": "",
@@ -112,7 +140,33 @@
       }
     ],
     "pressKitPath": "",
-    "photosPath": ""
+    "photosPath": "",
+    "mentions": [
+      { "date": "2026-11-14", "publication": "Culture of Yaroslavl Region", "title": "“Tchaikovsky” concert at the Yaroslavl Philharmonic", "url": "https://culture76.ru/afisha/koncerty/11176722/" },
+      { "date": "2026-09-09", "publication": "Marina Tsvetaeva House Museum", "title": "“Scholarship Holders” festival: Julia Pianikova and Lyudmila Daraseliya", "url": "https://dommuseum.ru/kalendar-sobyitij/2026/sentyabr/festival-stipendiatyi-raznyix-let-yuliya-pyanikova-i-lyudmila-daraseliya" },
+      { "date": "2026-03-05", "publication": "Moscow Conservatory", "title": "Selected pages of Russian chamber music", "url": "https://www.mosconsv.ru/ru/concert/200854" },
+      { "date": "2026-02-14", "publication": "Moscow Exhibition Halls · Tushino Gallery", "title": "“142 Beats per Minute: the Radical Dimension of Love” — Tellur Trio", "url": "https://tushino.vzmoscow.ru/kon140226" },
+      { "date": "2026-01-17", "publication": "Moscow Conservatory", "title": "“Harp in Love”", "url": "https://www.mosconsv.ru/ru/concert/200444" },
+      { "date": "2025-12-28", "publication": "Moscow Conservatory", "title": "“A New Year’s Gift from Vienna”", "url": "https://www.mosconsv.ru/ru/concert/195332" },
+      { "date": "2025-11-30", "publication": "Moscow Conservatory", "title": "Laureates of the 8th Taneyev International Chamber Ensemble Competition", "url": "https://www.mosconsv.ru/ru/eventdet/200383" },
+      { "date": "2025-11-19", "publication": "Kirov Central Park of Culture and Leisure", "title": "Yelagin Evenings: chamber music evening. Tellur Trio", "url": "https://elaginpark.org/events/elaginskie-vechera-vecher-kamernoy-muzyki-fortepiannyy-ansambl-tellur-trio/" },
+      { "date": "2025-11-15", "publication": "Yarreg", "title": "International Kogan-Fest closes in Yaroslavl with a grand gala concert", "url": "https://yarreg.ru/n6emh/" },
+      { "date": "2025-11-15", "publication": "Yaroslavl Region Government", "title": "12th International Kogan-Fest closes with a grand gala concert", "url": "https://www.yarregion.ru/pages/presscenter/news.aspx?NewsId=36167" },
+      { "date": "2025-11-12", "publication": "Moscow Conservatory", "title": "Chamber music evening", "url": "https://www.mosconsv.ru/ru/concert/195397" },
+      { "date": "2025-11-06", "publication": "Culture of Yaroslavl Region", "title": "12th International Kogan-Fest discovers new talent again", "url": "https://culture76.ru/news/11163670/" },
+      { "date": "2025-10-15", "publication": "Marina Tsvetaeva House Museum", "title": "Tellur Trio. Chamber evening", "url": "https://dommuseum.ru/kalendar-sobyitij/2025/oktyabr/tellur-trio.-kamernyij-vecher" },
+      { "date": "2025-10-14", "publication": "Vyborg TV", "title": "Classical concert at the Alvar Aalto Library", "url": "https://vyborg.tv/afisha/konczert-klassicheskoj-muzyki-projdyot-v-biblioteke-alvara-aalto/" },
+      { "date": "2025-10-08", "publication": "Rostov Kremlin Museum", "title": "Concert-lecture “The Piano Trio: Facets of the Early 20th Century”", "url": "https://www.rostmuseum.ru/museum/news/muzyka-na-styke-epokh-kontsert-lektsiya-fortepiannoe-trio-grani-pervoy-chetverti-xx-veka-v-rostovsko/" },
+      { "date": "2025-09-27", "publication": "Moscow Exhibition Halls · Tushino Gallery", "title": "“The First Quarter of the 20th Century” — Tellur Trio", "url": "https://tushino.vzmoscow.ru/kon270925" },
+      { "date": "2025-06-27", "publication": "Sviblovo district newspaper", "title": "Sviblovo invites residents to free concerts", "url": "https://gazeta-sviblovo.ru/v-sviblove-priglasili-na-besplatnye-kontserty-i-v-biblioskver/" },
+      { "date": "2025-01-01", "publication": "Glazunov Petrozavodsk Conservatory", "title": "3rd International Performing Arts Competition: 1st-degree laureate, chamber ensemble", "url": "https://glazunovcons.ru/images/pictures/competitions/2025/rezul_taty_distancionnogo_tura.pdf" },
+      { "date": "2024-12-04", "publication": "Glinka Magnitogorsk Conservatory", "title": "Gaidamovich Chamber Ensemble Competition: 3rd prize, Invenzio Trio", "url": "https://magkmusic.ru/attachments/article/4024/%D0%A0%D0%95%D0%97%D0%A3%D0%9B%D0%AC%D0%A2%D0%90%D0%A2%D0%AB%20%D0%9A%D0%9E%D0%9D%D0%9A%D0%A3%D0%A0%D0%A1%D0%90%202024.pdf" },
+      { "date": "2023-01-12", "publication": "Elena Obraztsova Cultural Centre", "title": "“To Your Soul, Elena” — concert in memory of Elena Obraztsova", "url": "https://www.obraztsova.org/events_january_23.html" },
+      { "date": "2022-11-29", "publication": "Association of Music Competitions of Russia", "title": "28th Kabalevsky International Competition for Young Musicians: 2nd prize", "url": "https://music-competitions.ru/node/1330" },
+      { "date": "2022-04-21", "publication": "ROLLD", "title": "“Dialogues with Music” — concert at the Nosov mansion", "url": "https://rolld.ru/event/dialogi-s-muzykoi" },
+      { "date": "2020-11-07", "publication": "Ippolitov-Ivanov Institute", "title": "Ippolitov-Ivanov All-Russian Competition-Festival: 2nd-degree laureate", "url": "https://old.ippolitovka.ru/node/3609" },
+      { "date": "2019-03-14", "publication": "Germany24", "title": "16th International Cultural Festival “Flowers of Russia”", "url": "https://germany24.ru/de/news/novosti-germanii-segodnja-v-novostjah/6587-xvi-mezdunarodnyj-kulturnyj-festival-cvety-rossii.html" }
+    ]
   },
   "contacts": {
     "generalEmail": "",

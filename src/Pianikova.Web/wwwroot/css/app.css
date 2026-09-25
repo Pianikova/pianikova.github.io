@@ -168,6 +168,12 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d496a0; outline-offs
 .press-links { display: inline-flex; gap: 10px; margin-left: 10px; vertical-align: middle; }
 .press-links a { display: inline-flex; opacity: .85; transition: opacity .2s; }
 .press-links a:hover, .press-links a:focus-visible { opacity: 1; }
+.press-mentions { max-width: 560px; margin-top: 12px; font-family: var(--sans); font-size: 15px; }
+.press-mentions summary { cursor: pointer; padding: 12px 0; border-top: 1px solid rgba(243,239,231,.25); letter-spacing: .02em; }
+.press-mentions ul { margin: 8px 0 0; padding: 0; list-style: none; }
+.press-mentions li { display: grid; gap: 2px; padding: 10px 0; border-top: 1px solid rgba(243,239,231,.12); line-height: 1.35; }
+.press-mention-meta { font-size: 12px; opacity: .65; }
+.press-mentions a { color: inherit; text-underline-offset: 3px; }
 .press-actions { grid-column: 2; display: flex; gap: 28px; align-items: center; }
 .press .muted-label { color: rgba(243,239,231,.65); }
 .press .text-link { color: var(--paper); }

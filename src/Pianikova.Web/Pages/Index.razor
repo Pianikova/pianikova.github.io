@@ -344,7 +344,7 @@ else
         {
             <section id="press" class="press section-pad">
                 <div>
-                    <h2>@L["PressPresenters"]</h2>
+                    <h2>@L["Press"]</h2>
                 </div>
                 <div class="press-quotes">
                     @foreach (var quote in content.Press.Quotes)
@@ -376,6 +376,21 @@ else
                                 <span> · @quote.PublishedAt.Year</span>
                             </cite>
                         </blockquote>
+                    }
+                    @if (content.Press.Mentions.Count > 0)
+                    {
+                        <details class="press-mentions">
+                            <summary>@L["PressMentions"] (@content.Press.Mentions.Count)</summary>
+                            <ul>
+                                @foreach (var mention in content.Press.Mentions)
+                                {
+                                    <li>
+                                        <span class="press-mention-meta">@mention.Date.Year · @mention.Publication</span>
+                                        <a href="@mention.Url" target="_blank" rel="noopener">@mention.Title.In(_language)</a>
+                                    </li>
+                                }
+                            </ul>
+                        </details>
                     }
                 </div>
                 @if (!string.IsNullOrWhiteSpace(content.Press.PressKitPath) || !string.IsNullOrWhiteSpace(content.Press.PhotosPath))
