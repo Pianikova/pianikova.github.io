@@ -98,7 +98,7 @@ internal sealed class SiteContentSource(HttpClient httpClient, NavigationManager
         site.Projects.Select(Project).ToArray(),
         new PressContent(
             site.Press.Quotes.Select(x => new PressQuote(Text(x.Text), x.Publication, x.Author, x.PublishedAt, x.SourceUrl, x.Links ?? [])).OrderByDescending(x => x.PublishedAt).ToArray(),
-            (site.Press.Mentions ?? []).Select(x => new PressMention(Text(x.Title), x.Publication, x.Date, x.Url)).OrderByDescending(x => x.Date).ToArray(),
+            (site.Press.Mentions ?? []).Select(x => new PressMention(Text(x.Title), x.Publication, x.Date, x.DatePrecision == "year", x.Url)).OrderByDescending(x => x.Date).ToArray(),
             site.Press.PressKitPath,
             site.Press.PhotosPath),
         new ContactContent(site.Contacts.GeneralEmail, site.Contacts.ManagementEmail, site.Contacts.PressEmail, site.Contacts.SocialLinks));

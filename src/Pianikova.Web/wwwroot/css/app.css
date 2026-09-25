@@ -160,21 +160,61 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d496a0; outline-offs
 .past-concerts .concert-row { grid-template-columns: 150px 1.2fr 1.4fr; }
 .empty-message { padding: 48px 0; border-block: 1px solid var(--line); }
 
-.press { display: grid; grid-template-columns: 1.2fr 1fr; gap: 80px; padding-block: clamp(80px, 10vw, 150px); color: var(--paper); background: var(--wine); }
-.press-quotes blockquote { max-width: 560px; margin: 0 0 30px; font-family: var(--serif); font-size: 30px; line-height: 1.25; }
+.press { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: clamp(32px, 5vw, 80px); align-items: start; padding-block: clamp(80px, 10vw, 150px); color: var(--paper); background: var(--wine); }
+.press-heading { grid-column: 2; grid-row: 1; position: sticky; top: 100px; text-align: right; }
+.press-years { grid-column: 1; grid-row: 1; min-width: 0; }
+.press-years { interpolate-size: allow-keywords; }
+.press-year { border-top: 1px solid rgba(243,239,231,.3); }
+.press-year:last-child { border-bottom: 1px solid rgba(243,239,231,.3); }
+.press-year > summary { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: clamp(16px, 3vw, 36px); padding: 22px 0; cursor: pointer; list-style: none; transition: padding .35s ease; }
+.press-year > summary::-webkit-details-marker { display: none; }
+.press-year > summary:focus-visible { outline: 2px solid var(--paper); outline-offset: 4px; }
+.press-year-label { font-family: var(--serif); font-size: clamp(34px, 4.4vw, 56px); line-height: 1; opacity: .55; transition: opacity .35s ease; font-variant-numeric: lining-nums; }
+.press-year[open] > summary .press-year-label, .press-year > summary:hover .press-year-label { opacity: 1; }
+.press-year-meta { display: grid; gap: 4px; min-width: 0; font-family: var(--sans); }
+.press-year-count { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; opacity: .75; }
+.press-year-sources { overflow: hidden; font-size: 14px; white-space: nowrap; text-overflow: ellipsis; opacity: .6; transition: opacity .3s ease; }
+.press-year[open] .press-year-sources { opacity: 0; }
+.press-toggle { position: relative; width: 44px; height: 44px; border: 1px solid rgba(243,239,231,.45); border-radius: 50%; transition: background-color .3s ease, border-color .3s ease, transform .45s cubic-bezier(.2,.7,.2,1); }
+.press-toggle::before, .press-toggle::after { content: ""; position: absolute; top: 50%; left: 50%; width: 14px; height: 1.5px; background: currentColor; transform: translate(-50%, -50%); transition: transform .45s cubic-bezier(.2,.7,.2,1); }
+.press-toggle::after { transform: translate(-50%, -50%) rotate(90deg); }
+.press-year > summary:hover .press-toggle { border-color: var(--paper); background: rgba(243,239,231,.08); }
+.press-year[open] .press-toggle { transform: rotate(180deg); background: var(--paper); border-color: var(--paper); color: var(--wine); }
+.press-year[open] .press-toggle::after { transform: translate(-50%, -50%) rotate(0deg); }
+.press-year::details-content, .press-more::details-content { block-size: 0; overflow: hidden; transition: block-size .5s cubic-bezier(.2,.7,.2,1), content-visibility .5s allow-discrete; }
+.press-year[open]::details-content, .press-more[open]::details-content { block-size: auto; }
+.press-year[open] > :not(summary), .press-more[open] > :not(summary) { animation: press-reveal .55s cubic-bezier(.2,.7,.2,1) both; }
+.press-year[open] > :not(summary):nth-child(3) { animation-delay: .08s; }
+.press-year[open] { padding-bottom: 28px; }
+@keyframes press-reveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.press-more > summary { display: inline-flex; align-items: center; gap: 10px; margin: 14px 0 6px; padding: 9px 16px; border: 1px solid rgba(243,239,231,.4); border-radius: 999px; font-family: var(--sans); font-size: 13px; letter-spacing: .04em; cursor: pointer; list-style: none; transition: background-color .3s ease, color .3s ease, border-color .3s ease; }
+.press-more > summary::-webkit-details-marker { display: none; }
+.press-more > summary:hover, .press-more > summary:focus-visible { border-color: var(--paper); background: var(--paper); color: var(--wine); outline: none; }
+.press-more-open, .press-more[open] .press-more-closed { display: none; }
+.press-more[open] .press-more-open { display: inline; }
+.press-more-chevron { width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .4s cubic-bezier(.2,.7,.2,1); }
+.press-more[open] .press-more-chevron { transform: translateY(2px) rotate(225deg); }
+@keyframes press-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+    .press-year::details-content, .press-more::details-content, .press-toggle::before, .press-toggle::after, .press-more-chevron { transition: none; }
+    .press-toggle { transition: background-color .3s ease, border-color .3s ease, color .3s ease; }
+    .press-year[open] .press-toggle { transform: none; }
+    .press-year[open] > :not(summary), .press-more[open] > :not(summary) { animation: press-fade .35s ease both; }
+}
+.press-quotes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px 48px; padding: 6px 0 12px; }
+.press-quotes blockquote { margin: 0 0 24px; font-family: var(--serif); font-size: 24px; line-height: 1.3; }
 .press-quotes blockquote p { margin: 0; }
-.press-quotes cite { display: block; margin-top: 12px; font-family: var(--sans); font-size: 13px; font-style: normal; opacity: .7; }
+.press-quotes cite { display: block; margin-top: 12px; font-family: var(--sans); font-size: 13px; font-style: normal; opacity: .75; }
 .press-quotes cite a { color: inherit; text-underline-offset: 3px; }
+.press-publication { font-weight: 700; }
+.press-mentions { margin: 0; padding: 0; list-style: none; font-family: var(--sans); font-size: 15px; }
+.press-mentions li { display: grid; gap: 3px; padding: 10px 0; border-top: 1px solid rgba(243,239,231,.12); line-height: 1.35; }
+.press-mention-meta { font-size: 12px; opacity: .7; }
+.press-mentions a { color: inherit; text-underline-offset: 3px; }
+.press-actions { grid-column: 1; display: flex; gap: 28px; align-items: center; }
 .press-links { display: inline-flex; gap: 10px; margin-left: 10px; vertical-align: middle; }
 .press-links a { display: inline-flex; opacity: .85; transition: opacity .2s; }
 .press-links a:hover, .press-links a:focus-visible { opacity: 1; }
-.press-mentions { max-width: 560px; margin-top: 12px; font-family: var(--sans); font-size: 15px; }
-.press-mentions summary { cursor: pointer; padding: 12px 0; border-top: 1px solid rgba(243,239,231,.25); letter-spacing: .02em; }
-.press-mentions ul { margin: 8px 0 0; padding: 0; list-style: none; }
-.press-mentions li { display: grid; gap: 2px; padding: 10px 0; border-top: 1px solid rgba(243,239,231,.12); line-height: 1.35; }
-.press-mention-meta { font-size: 12px; opacity: .65; }
-.press-mentions a { color: inherit; text-underline-offset: 3px; }
-.press-actions { grid-column: 2; display: flex; gap: 28px; align-items: center; }
 .press .muted-label { color: rgba(243,239,231,.65); }
 .press .text-link { color: var(--paper); }
 .press-photo { display: grid; gap: 10px; width: min(240px, 100%); color: var(--paper); text-decoration: none; font-size: 13px; }
@@ -226,6 +266,9 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d496a0; outline-offs
     .performance-grid, .biography, .press { grid-template-columns: 1fr; }
     .biography { gap: 70px; }
     .press { gap: 28px; }
+    .press-heading { grid-column: 1; grid-row: 1; position: static; text-align: left; }
+    .press-years { grid-row: 2; }
+    .press-actions { grid-row: 3; }
     .press > p { margin: 0; }
     .press-actions { grid-column: 1; }
     .concert-row { grid-template-columns: 110px 1fr auto; }

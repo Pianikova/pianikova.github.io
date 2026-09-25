@@ -45,7 +45,11 @@
   <data name="PastConcerts" xml:space="preserve"><value>Past concerts</value></data>
   <data name="NewDates" xml:space="preserve"><value>New dates are being prepared. Please check back soon.</value></data>
   <data name="ProfessionalMaterials" xml:space="preserve"><value>Professional materials</value></data>
-  <data name="PressMentions" xml:space="preserve"><value>Announcements and mentions</value></data>
+  <data name="PressMore" xml:space="preserve"><value>{0} more</value></data>
+  <data name="PressLess" xml:space="preserve"><value>Show less</value></data>
+  <data name="PressCountOne" xml:space="preserve"><value>{0} publication</value></data>
+  <data name="PressCountFew" xml:space="preserve"><value>{0} publications</value></data>
+  <data name="PressCountMany" xml:space="preserve"><value>{0} publications</value></data>
   <data name="PressDescription" xml:space="preserve"><value>Biography, high-resolution photography and verified materials will be collected here.</value></data>
   <data name="ComingSoon" xml:space="preserve"><value>coming soon</value></data>
   <data name="ContactManagement" xml:space="preserve"><value>Contact management</value></data>

@@ -45,7 +45,12 @@ else
     var repertoire = content.Repertoire.In(_language);
     var hasRepertoire = !string.IsNullOrWhiteSpace(repertoire);
     var hasProjects = content.Projects.Count > 0;
-    var hasPress = content.Press.Quotes.Count > 0 || !string.IsNullOrWhiteSpace(content.Press.PressKitPath) || !string.IsNullOrWhiteSpace(content.Press.PhotosPath);
+    var pressYears = content.Press.Quotes.Select(x => x.PublishedAt.Year)
+        .Concat(content.Press.Mentions.Select(x => x.Date.Year))
+        .Distinct()
+        .OrderByDescending(x => x)
+        .ToArray();
+    var hasPress = pressYears.Length > 0 || !string.IsNullOrWhiteSpace(content.Press.PressKitPath) || !string.IsNullOrWhiteSpace(content.Press.PhotosPath);
     var heroStatement = content.Hero.Statement.In(_language);
     var hasHeroDetails = !string.IsNullOrWhiteSpace(heroStatement) || hasFeatured || hasUpcomingConcerts;
 
@@ -343,53 +348,85 @@ else
         @if (hasPress)
         {
             <section id="press" class="press section-pad">
-                <div>
+                <div class="press-heading">
                     <h2>@L["Press"]</h2>
                 </div>
-                <div class="press-quotes">
-                    @foreach (var quote in content.Press.Quotes)
+                <div class="press-years">
+                    @for (var yearIndex = 0; yearIndex < pressYears.Length; yearIndex++)
                     {
-                        <blockquote>
-                            <MarkdownContent Source="@quote.Text.In(_language)" CssClass="press-quote-content" />
-                            <cite>
-                                @if (!string.IsNullOrWhiteSpace(quote.SourceUrl))
+                        var year = pressYears[yearIndex];
+                        var yearQuotes = content.Press.Quotes.Where(x => x.PublishedAt.Year == year).ToArray();
+                        var yearMentions = content.Press.Mentions.Where(x => x.Date.Year == year).ToArray();
+                        var yearSources = yearQuotes.Select(x => x.Publication).Concat(yearMentions.Select(x => x.Publication)).Distinct();
+                        <details class="press-year" open="@(yearIndex == 0)">
+                            <summary>
+                                <span class="press-year-label">@year</span>
+                                <span class="press-year-meta">
+                                    <span class="press-year-count">@PublicationCount(yearQuotes.Length + yearMentions.Length)</span>
+                                    <span class="press-year-sources">@string.Join(" · ", yearSources)</span>
+                                </span>
+                                <span class="press-toggle" aria-hidden="true"></span>
+                            </summary>
+                            @if (yearQuotes.Length > 0)
+                            {
+                                <div class="press-quotes">
+                                    @foreach (var quote in yearQuotes)
+                                    {
+                                        <blockquote>
+                                            <MarkdownContent Source="@quote.Text.In(_language)" CssClass="press-quote-content" />
+                                            <cite>
+                                                @if (!string.IsNullOrWhiteSpace(quote.SourceUrl))
+                                                {
+                                                    <a class="press-publication" href="@quote.SourceUrl" target="_blank" rel="noopener">@quote.Publication</a>
+                                                }
+                                                else
+                                                {
+                                                    <span class="press-publication">@quote.Publication</span>
+                                                }
+                                                @if (quote.Links.Count > 0)
+                                                {
+                                                    <span class="press-links">
+                                                        @foreach (var link in quote.Links)
+                                                        {
+                                                            <a href="@link.Url" target="_blank" rel="noopener" title="@link.Service" aria-label="@link.Service"><ServiceIcon Service="@link.Service" /></a>
+                                                        }
+                                                    </span>
+                                                }
+                                                @if (!string.IsNullOrWhiteSpace(quote.Author))
+                                                {
+                                                    <span> · @quote.Author</span>
+                                                }
+                                                <span> · @MonthName(quote.PublishedAt)</span>
+                                            </cite>
+                                        </blockquote>
+                                    }
+                                </div>
+                            }
+                            @if (yearMentions.Length > 0)
+                            {
+                                <ul class="press-mentions">
+                                    @foreach (var mention in yearMentions.Take(PressMentionsPreview))
+                                    {
+                                        @MentionItem(mention)
+                                    }
+                                </ul>
+                                @if (yearMentions.Length > PressMentionsPreview)
                                 {
-                                    <a href="@quote.SourceUrl" target="_blank" rel="noopener">@quote.Publication</a>
+                                    <details class="press-more">
+                                        <summary>
+                                            <span class="press-more-closed">@string.Format(L["PressMore"], yearMentions.Length - PressMentionsPreview)</span>
+                                            <span class="press-more-open">@L["PressLess"]</span>
+                                            <span class="press-more-chevron" aria-hidden="true"></span>
+                                        </summary>
+                                        <ul class="press-mentions">
+                                            @foreach (var mention in yearMentions.Skip(PressMentionsPreview))
+                                            {
+                                                @MentionItem(mention)
+                                            }
+                                        </ul>
+                                    </details>
                                 }
-                                else
-                                {
-                                    @quote.Publication
-                                }
-                                @if (quote.Links.Count > 0)
-                                {
-                                    <span class="press-links">
-                                        @foreach (var link in quote.Links)
-                                        {
-                                            <a href="@link.Url" target="_blank" rel="noopener" title="@link.Service" aria-label="@link.Service"><ServiceIcon Service="@link.Service" /></a>
-                                        }
-                                    </span>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(quote.Author))
-                                {
-                                    <span> · @quote.Author</span>
-                                }
-                                <span> · @quote.PublishedAt.Year</span>
-                            </cite>
-                        </blockquote>
-                    }
-                    @if (content.Press.Mentions.Count > 0)
-                    {
-                        <details class="press-mentions">
-                            <summary>@L["PressMentions"] (@content.Press.Mentions.Count)</summary>
-                            <ul>
-                                @foreach (var mention in content.Press.Mentions)
-                                {
-                                    <li>
-                                        <span class="press-mention-meta">@mention.Date.Year · @mention.Publication</span>
-                                        <a href="@mention.Url" target="_blank" rel="noopener">@mention.Title.In(_language)</a>
-                                    </li>
-                                }
-                            </ul>
+                            }
                         </details>
                     }
                 </div>
@@ -505,6 +542,31 @@ else
 
         _lightboxIndex = ((_lightboxIndex ?? 0) - 1 + count) % count;
     }
+    private const int PressMentionsPreview = 4;
+
+    private string PublicationCount(int count)
+    {
+        var form = _language == "ru"
+            ? (count % 10 == 1 && count % 100 != 11 ? "One" : count % 10 is >= 2 and <= 4 && count % 100 is < 12 or > 14 ? "Few" : "Many")
+            : (count == 1 ? "One" : "Many");
+        return string.Format(L[$"PressCount{form}"], count);
+    }
+
+    private string MonthName(DateOnly date) =>
+        CultureInfo.GetCultureInfo(_language).DateTimeFormat.GetMonthName(date.Month).ToLower(CultureInfo.GetCultureInfo(_language));
+
+    private RenderFragment MentionItem(PressMention mention) =>
+        @<li>
+            <span class="press-mention-meta">
+                @if (!mention.YearOnly)
+                {
+                    @MonthName(mention.Date)<text> · </text>
+                }
+                <strong>@mention.Publication</strong>
+            </span>
+            <a href="@mention.Url" target="_blank" rel="noopener">@mention.Title.In(_language)</a>
+        </li>;
+
     private static string Month(DateTimeOffset date) => date.ToString("MMMM", CultureInfo.CurrentCulture).ToUpperInvariant();
 
     private string ConcertLocation(Concert concert) =>

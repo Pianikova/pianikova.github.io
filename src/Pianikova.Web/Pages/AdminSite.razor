@@ -213,6 +213,7 @@
                             </div>
                         </div>
                         <div class="admin-field"><label>Дата</label><input type="date" @bind="_pressMentions[index].Date" /></div>
+                        <div class="admin-field"><label><input type="checkbox" @bind="_pressMentions[index].YearOnly" /> Известен только год</label></div>
                         <div class="admin-field"><label>Ссылка</label><input @bind="_pressMentions[index].Url" /></div>
                     </div>
                 }
@@ -365,6 +366,7 @@
                 TitleEn = mentionEn.Title, TitleRu = mentionRu.Title,
                 PublicationEn = mentionEn.Publication, PublicationRu = mentionRu.Publication,
                 Date = mentionEn.Date,
+                YearOnly = mentionEn.DatePrecision == "year",
                 Url = mentionEn.Url
             });
         }
@@ -519,13 +521,15 @@
         public string PublicationEn { get; set; } = "";
         public string PublicationRu { get; set; } = "";
         public DateOnly Date { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+        public bool YearOnly { get; set; }
         public string Url { get; set; } = "";
 
         public PressMentionDocument ToDocument(string language) => new(
             (language == "ru" ? TitleRu : TitleEn).Trim(),
             (language == "ru" ? PublicationRu : PublicationEn).Trim(),
             Date,
-            Url.Trim());
+            Url.Trim(),
+            YearOnly ? "year" : null);
     }
 
     private sealed class PressQuoteEdit
