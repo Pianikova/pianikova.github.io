@@ -1,6 +1,6 @@
 {
   "id": "site",
-  "lastUpdated": "2026-08-11",
+  "lastUpdated": "2026-09-25",
   "identity": {
     "name": "Юлия Пьяникова",
     "profession": "Скрипка",
@@ -70,7 +70,22 @@
     }
   ],
   "press": {
-    "quotes": [],
+    "quotes": [
+      {
+        "text": "Победа на «Коган-фесте» в Ярославле привела скрипачку Юлию Пьяникову на сцену Японии: 19 сентября она выступила на Международном музыкальном фестивале Сэтоути, а 14 ноября исполнит ту же программу в Ярославской филармонии.",
+        "publication": "Ярославская государственная филармония",
+        "author": "",
+        "publishedAt": "2026-09-20",
+        "sourceUrl": "https://yaagso.ru/news/pobeda-na-kogan-feste-v-yaroslavle-privela-skripachku-yuliyu-pyanikovu-na-sczenu-yaponii/"
+      },
+      {
+        "text": "Международный музыкальный фестиваль Сэтоути в префектуре Кагава собрал 2200 слушателей. Среди исполнителей — виолончелист Дай Мията и российская скрипачка Юлия Пьяникова.",
+        "publication": "Nikkei (日本経済新聞)",
+        "author": "",
+        "publishedAt": "2026-09-24",
+        "sourceUrl": "https://www.nikkei.com/article/DGXZQOCC240YN0U6A920C2000000/"
+      }
+    ],
     "pressKitPath": "",
     "photosPath": ""
   },

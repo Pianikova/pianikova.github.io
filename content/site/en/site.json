@@ -1,6 +1,6 @@
 {
   "id": "site",
-  "lastUpdated": "2026-08-11",
+  "lastUpdated": "2026-09-25",
   "identity": {
     "name": "Julia Pianikova",
     "profession": "Violin",
@@ -70,7 +70,22 @@
     }
   ],
   "press": {
-    "quotes": [],
+    "quotes": [
+      {
+        "text": "A win at Kogan-Fest in Yaroslavl brought violinist Julia Pianikova to the stage in Japan: on 19 September she performed at the Setouchi International Music Festival, and on 14 November she will play the same programme at the Yaroslavl Philharmonic.",
+        "publication": "Yaroslavl State Philharmonic",
+        "author": "",
+        "publishedAt": "2026-09-20",
+        "sourceUrl": "https://yaagso.ru/news/pobeda-na-kogan-feste-v-yaroslavle-privela-skripachku-yuliyu-pyanikovu-na-sczenu-yaponii/"
+      },
+      {
+        "text": "The Setouchi International Music Festival in Kagawa Prefecture drew 2,200 listeners. Performers included cellist Dai Miyata and Russian violinist Julia Pianikova.",
+        "publication": "Nikkei",
+        "author": "",
+        "publishedAt": "2026-09-24",
+        "sourceUrl": "https://www.nikkei.com/article/DGXZQOCC240YN0U6A920C2000000/"
+      }
+    ],
     "pressKitPath": "",
     "photosPath": ""
   },
