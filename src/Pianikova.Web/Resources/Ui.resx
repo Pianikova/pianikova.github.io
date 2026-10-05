@@ -12,6 +12,9 @@
   <data name="Menu" xml:space="preserve"><value>Menu</value></data>
   <data name="MainNavigation" xml:space="preserve"><value>Main navigation</value></data>
   <data name="Concerts" xml:space="preserve"><value>Concerts</value></data>
+  <data name="TelegramFeedTitle" xml:space="preserve"><value>From Telegram</value></data>
+  <data name="TelegramChannel" xml:space="preserve"><value>Visit the channel</value></data>
+  <data name="TelegramReadPost" xml:space="preserve"><value>Read the post</value></data>
   <data name="Listen" xml:space="preserve"><value>Listen</value></data>
   <data name="Biography" xml:space="preserve"><value>Biography</value></data>
   <data name="Projects" xml:space="preserve"><value>Projects</value></data>

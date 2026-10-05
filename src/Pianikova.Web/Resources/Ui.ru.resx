@@ -12,6 +12,9 @@
   <data name="Menu" xml:space="preserve"><value>Меню</value></data>
   <data name="MainNavigation" xml:space="preserve"><value>Основная навигация</value></data>
   <data name="Concerts" xml:space="preserve"><value>Концерты</value></data>
+  <data name="TelegramFeedTitle" xml:space="preserve"><value>Из Telegram</value></data>
+  <data name="TelegramChannel" xml:space="preserve"><value>Читать канал</value></data>
+  <data name="TelegramReadPost" xml:space="preserve"><value>Читать публикацию</value></data>
   <data name="Listen" xml:space="preserve"><value>Слушать</value></data>
   <data name="Biography" xml:space="preserve"><value>Биография</value></data>
   <data name="Projects" xml:space="preserve"><value>Проекты</value></data>

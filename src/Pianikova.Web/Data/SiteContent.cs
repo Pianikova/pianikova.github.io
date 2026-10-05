@@ -1,6 +1,6 @@
 namespace Pianikova.Web.Data;
 
-public sealed record SiteSettings(int SchemaVersion, string DefaultLanguage, IReadOnlyList<string> AvailableLanguages);
+public sealed record SiteSettings(int SchemaVersion, string DefaultLanguage, IReadOnlyList<string> AvailableLanguages, string? TelegramFeedUrl = null);
 
 public sealed record SiteContent(
     int SchemaVersion,

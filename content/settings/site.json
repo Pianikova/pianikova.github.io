@@ -1,5 +1,6 @@
 {
   "schemaVersion": 2,
   "defaultLanguage": "en",
-  "availableLanguages": [ "en", "ru" ]
+  "availableLanguages": [ "en", "ru" ],
+  "telegramFeedUrl": "https://pianikova-telegram-feed.nikolay-pyanikov.workers.dev/feed"
 }

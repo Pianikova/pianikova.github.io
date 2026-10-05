@@ -113,6 +113,15 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d496a0; outline-offs
 .project-description { margin: 0 0 24px; color: #46413d; }
 .project-description p { white-space: pre-line; }
 
+.telegram-feed { background: #e9e2d8; }
+.telegram-feed .section-heading { gap: 30px; }
+.telegram-feed .section-heading .text-link { flex-shrink: 0; }
+.telegram-posts { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: clamp(20px, 3vw, 34px); }
+.telegram-post { display: flex; flex-direction: column; min-width: 0; padding: clamp(24px, 3vw, 38px); border: 1px solid var(--line); background: var(--paper); }
+.telegram-post time { color: var(--wine); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.telegram-post p { flex: 1; margin: 22px 0 28px; overflow-wrap: anywhere; white-space: pre-line; }
+.telegram-post .text-link { align-self: flex-start; font-size: 14px; }
+
 .biography { position: relative; display: grid; grid-template-columns: minmax(260px, .75fr) minmax(0, 1.25fr); align-items: start; gap: clamp(50px, 8vw, 130px); }
 .biography blockquote { margin: 0; font-family: var(--serif); font-size: clamp(38px, 4.3vw, 68px); line-height: 1.04; letter-spacing: -.03em; }
 .biography-copy { align-self: end; min-width: 0; }
@@ -289,6 +298,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d496a0; outline-offs
     .concert-date { width: max-content; }
     .concert-place, .concert-program, .next-concert > .ticket-link, .next-concert > .ticket-status { grid-column: 1; }
     .section-heading { display: block; margin-bottom: 40px; }
+    .telegram-feed .section-heading .text-link { margin-top: 16px; }
     .section-heading h2 { font-size: 46px; }
     .performance-grid { gap: 36px; }
     .performance-poster { aspect-ratio: 4 / 5; }

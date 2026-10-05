@@ -26,6 +26,11 @@ internal sealed class ContentValidationTarget(BuildPaths paths)
         if (languages.Length == 0) Error("content/settings/site.json", "availableLanguages must contain at least one language.");
         if (defaultLanguage is null || !languages.Contains(defaultLanguage, StringComparer.OrdinalIgnoreCase))
             Error("content/settings/site.json", "defaultLanguage must be present in availableLanguages.");
+        var telegramFeedUrl = settings["telegramFeedUrl"]?.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(telegramFeedUrl) &&
+            (!Uri.TryCreate(telegramFeedUrl, UriKind.Absolute, out var feedUri) ||
+             feedUri.Scheme != Uri.UriSchemeHttps || feedUri.AbsolutePath != "/feed"))
+            Error("content/settings/site.json", "telegramFeedUrl must be an HTTPS /feed URL.");
 
         var schedules = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
         var videos = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);

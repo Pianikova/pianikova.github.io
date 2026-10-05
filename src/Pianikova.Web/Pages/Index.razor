@@ -286,6 +286,15 @@ else
             </section>
         }
 
+        @if (!string.IsNullOrWhiteSpace(_telegramFeedUrl))
+        {
+            var telegramChannel = content.Contacts.SocialLinks.FirstOrDefault(x => x.Service.Equals("Telegram", StringComparison.OrdinalIgnoreCase));
+            if (telegramChannel is not null)
+            {
+                <TelegramFeed FeedUrl="@_telegramFeedUrl" ChannelUrl="@telegramChannel.Url" Language="@_language" />
+            }
+        }
+
         @if (hasRepertoire)
         {
             <section id="repertoire" class="document-section section-pad numbered-section">
@@ -474,6 +483,7 @@ else
     private bool _playFeatured;
     private bool _showFullBiography;
     private bool _scrollEffectsInitialized;
+    private string _telegramFeedUrl = string.Empty;
     private int? _lightboxIndex;
 
     protected override Task OnInitializedAsync() => LoadAsync();
@@ -494,6 +504,7 @@ else
         try
         {
             var settings = await ContentSource.LoadSettingsAsync();
+            _telegramFeedUrl = settings.TelegramFeedUrl ?? string.Empty;
             _language = NormalizeLanguage(CultureInfo.CurrentUICulture.Name);
             if (!settings.AvailableLanguages.Contains(_language, StringComparer.OrdinalIgnoreCase))
             {

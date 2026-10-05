@@ -63,6 +63,7 @@ nunit-*.xml
 # Temporary BenchmarkDotNet output from older runs
 /reports/DependencyInjection/raw/
 /.vs
+**/.dev.vars
 *.user
 /src/Pianikova.Web/wwwroot/content/
 /tmp/

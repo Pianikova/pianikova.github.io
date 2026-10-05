@@ -1,0 +1,83 @@
+@implements IAsyncDisposable
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject IStringLocalizer<Ui> L
+
+@if (_posts.Count > 0)
+{
+    <section id="telegram" class="telegram-feed section-pad numbered-section" aria-label="@L["TelegramFeedTitle"]">
+        <header class="section-heading">
+            <div>
+                <p class="eyebrow">Telegram</p>
+                <h2>@L["TelegramFeedTitle"]</h2>
+            </div>
+            <a class="text-link" href="@ChannelUrl" target="_blank" rel="noopener noreferrer">@L["TelegramChannel"] <span aria-hidden="true">↗</span></a>
+        </header>
+        <div class="telegram-posts">
+            @foreach (var post in _posts)
+            {
+                <article class="telegram-post">
+                    <time datetime="@post.Date.ToString("O")">@post.Date.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo(Language))</time>
+                    <p>@post.Text</p>
+                    <a class="text-link" href="@post.Url" target="_blank" rel="noopener noreferrer">@L["TelegramReadPost"] <span aria-hidden="true">↗</span></a>
+                </article>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public string FeedUrl { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string ChannelUrl { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Language { get; set; } = "ru";
+
+    private readonly CancellationTokenSource _dispose = new();
+    private IReadOnlyList<TelegramPost> _posts = [];
+    private Task? _refreshTask;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync(_dispose.Token);
+        _refreshTask = RefreshLoopAsync(_dispose.Token);
+    }
+
+    private async Task RefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(5));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                if (!await JS.InvokeAsync<bool>("pianikovaTelegramFeed.isVisible", cancellationToken)) continue;
+                await RefreshAsync(cancellationToken);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+    }
+
+    private async Task RefreshAsync(CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(8));
+        try
+        {
+            var feed = await Http.GetFromJsonAsync<TelegramFeedResponse>(FeedUrl, timeout.Token);
+            if (feed is not null) _posts = feed.Posts ?? [];
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            // Keep the last successful feed if the endpoint is temporarily unavailable.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _dispose.CancelAsync();
+        if (_refreshTask is not null) await _refreshTask;
+        _dispose.Dispose();
+    }
+
+    private sealed record TelegramFeedResponse(IReadOnlyList<TelegramPost>? Posts);
+    private sealed record TelegramPost(long Id, DateTimeOffset Date, string Text, string Url);
+}

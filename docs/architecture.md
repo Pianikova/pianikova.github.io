@@ -6,6 +6,7 @@
 - `build` — консольное приложение с целями сборки, проверки контента и публикации;
 - `content` — редакционные данные и медиаресурсы;
 - `cloudflare/decap-oauth` — OAuth-посредник для встроенного редактора;
+- `cloudflare/telegram-feed` — webhook для Telegram и публичный API ленты;
 - `.github/workflows` — CI и публикация GitHub Pages.
 
 Приложение использует .NET 10, Blazor WebAssembly и Pure.DI. Markdown обрабатывается библиотекой Markdig; встроенный HTML в редакционных Markdown-полях отключён.
@@ -21,6 +22,8 @@ https://raw.githubusercontent.com/Pianikova/Pianikova.github.io/main/content/
 ```
 
 Благодаря этому изменения, сохранённые через `/admin`, появляются на сайте без повторной сборки приложения.
+
+Лента Telegram загружается отдельно из Cloudflare Worker. Worker принимает новые публикации канала, оставляет только сообщения со ссылкой на `pianikova.com` и хранит результат в D1. Браузер повторно запрашивает ленту раз в пять минут, пока вкладка видима. Адрес API указан в `content/settings/site.json`.
 
 ## Маршруты
 

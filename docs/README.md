@@ -12,6 +12,7 @@
 ## Инфраструктура
 
 - [Настройка GitHub OAuth через Cloudflare Worker](../cloudflare/decap-oauth/README.md).
+- [Настройка автоматической ленты Telegram](../cloudflare/telegram-feed/README.md).
 
 ## Продукт и дизайн
 
