@@ -8,6 +8,6 @@ CHANNEL_USERNAME = "gattavasis"
 [[d1_databases]]
 binding = "DB"
 database_name = "pianikova-telegram-feed"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "2e08b0f5-698d-487a-b1e1-4015174a3d1b"
 
 # Add TELEGRAM_CHANNEL_ID and TELEGRAM_WEBHOOK_SECRET with `wrangler secret put`.
