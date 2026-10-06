@@ -37,10 +37,13 @@ function collectTextLinks(text, entities, candidates) {
     }
   }
 
-  for (const match of text.matchAll(URL_PATTERN)) {
+  const fullUrls = [...text.matchAll(URL_PATTERN)];
+  for (const match of fullUrls) {
     candidates.push(match[0]);
   }
   for (const match of text.matchAll(BARE_SITE_PATTERN)) {
+    const siteIndex = match.index + match[0].indexOf(match.groups.url);
+    if (fullUrls.some(url => siteIndex >= url.index && siteIndex < url.index + url[0].length)) continue;
     candidates.push(match.groups.url);
   }
 }

@@ -13,6 +13,7 @@
 
 - [Настройка GitHub OAuth через Cloudflare Worker](../cloudflare/decap-oauth/README.md).
 - [Настройка автоматической ленты Telegram](../cloudflare/telegram-feed/README.md).
+- [Импорт исторических постов Telegram](./telegram-history.md).
 
 ## Продукт и дизайн
 
@@ -26,3 +27,4 @@
 | Проверка контента | `dotnet run --project build -- content-check` |
 | Сборка решения | `dotnet run --project build -- build` |
 | Production-сборка | `dotnet run --project build -- web` |
+| Импорт истории Telegram | `dotnet run --project build -- telegram-history` |

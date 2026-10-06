@@ -27,7 +27,7 @@ test("accepts a bare site address and Telegram UTF-16 entity offsets", () => {
 
 test("rejects lookalike domains, credentials and other sites containing the name", () => {
   assert.deepEqual(siteLinks({
-    text: "https://pianikova.com.evil.test pianikova.com.evil.test https://evil.test/pianikova.com notpianikova.com https://pianikova.com@evil.test/",
+    text: "https://pianikova.com.evil.test pianikova.com.evil.test https://evil.test/pianikova.com https://evil.test/(pianikova.com) notpianikova.com https://pianikova.com@evil.test/",
   }), []);
 });
 

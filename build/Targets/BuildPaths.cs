@@ -16,4 +16,5 @@ internal sealed class BuildPaths
     public string SolutionDirectory { get; }
     public string WebProject => Path.Combine(SolutionDirectory, "src", "Pianikova.Web", "Pianikova.Web.csproj");
     public string WebOutput => Path.Combine(SolutionDirectory, "artifacts", "web");
+    public string TelegramPosts => Path.Combine(SolutionDirectory, "content", "telegram", "posts.json");
 }

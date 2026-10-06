@@ -8,12 +8,20 @@ internal sealed class BuildApplication(
     WebTarget web,
     LocalWebTarget localWeb,
     ContentValidationTarget contentValidation,
+    TelegramHistoryTarget telegramHistory,
     CancellationToken cancellationToken)
 {
     public async Task<int> RunAsync()
     {
         var target = args.FirstOrDefault()?.ToLowerInvariant();
         if (target is "content-check") return contentValidation.Run();
+        if (target is "telegram-history")
+        {
+            var before = contentValidation.Run();
+            if (before != 0) return before;
+            var import = await telegramHistory.RunAsync(cancellationToken);
+            return import == 0 ? contentValidation.Run() : import;
+        }
         if (target is not ("build" or "web" or "local-web")) return await HelpAsync();
 
         var validationResult = contentValidation.Run();
@@ -35,6 +43,7 @@ internal sealed class BuildApplication(
         Console.WriteLine("  content-check          Validate all CMS content");
         Console.WriteLine("  web                    Publish GitHub Pages artifact");
         Console.WriteLine("  local-web [--no-browser]  Run the site locally (editor at /admin)");
+        Console.WriteLine("  telegram-history       Import channel posts for a date range into content/telegram/posts.json");
         return Task.FromResult(0);
     }
 }

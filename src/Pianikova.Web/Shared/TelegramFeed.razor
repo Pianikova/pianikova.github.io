@@ -2,6 +2,7 @@
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject IStringLocalizer<Ui> L
+@inject ISiteContentSource Content
 
 @if (_posts.Count > 0)
 {
@@ -18,7 +19,7 @@
             {
                 <article class="telegram-post">
                     <time datetime="@post.Date.ToString("O")">@post.Date.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo(Language))</time>
-                    <p>@post.Text</p>
+                    <p>@Excerpt(post.Text)</p>
                     <a class="text-link" href="@post.Url" target="_blank" rel="noopener noreferrer">@L["TelegramReadPost"] <span aria-hidden="true">↗</span></a>
                 </article>
             }
@@ -32,6 +33,8 @@
     [Parameter, EditorRequired] public string Language { get; set; } = "ru";
 
     private readonly CancellationTokenSource _dispose = new();
+    private IReadOnlyList<TelegramPost> _dynamicPosts = [];
+    private IReadOnlyList<TelegramPost> _staticPosts = [];
     private IReadOnlyList<TelegramPost> _posts = [];
     private Task? _refreshTask;
 
@@ -58,17 +61,54 @@
 
     private async Task RefreshAsync(CancellationToken cancellationToken)
     {
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(8));
+        using var dynamicTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        dynamicTimeout.CancelAfter(TimeSpan.FromSeconds(8));
         try
         {
-            var feed = await Http.GetFromJsonAsync<TelegramFeedResponse>(FeedUrl, timeout.Token);
-            if (feed is not null) _posts = feed.Posts ?? [];
+            var feed = await Http.GetFromJsonAsync<TelegramFeedResponse>(FeedUrl, dynamicTimeout.Token);
+            if (feed is not null) _dynamicPosts = feed.Posts ?? [];
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
-            // Keep the last successful feed if the endpoint is temporarily unavailable.
+            // Keep the last successful dynamic feed if the endpoint is temporarily unavailable.
         }
+
+        using var staticTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        staticTimeout.CancelAfter(TimeSpan.FromSeconds(8));
+        try
+        {
+            var staticUrl = Content.AssetUrl("telegram/posts.json");
+            var feed = await Http.GetFromJsonAsync<TelegramStaticFeed>($"{staticUrl}?refresh={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}", staticTimeout.Token);
+            if (feed?.SchemaVersion == 1) _staticPosts = feed.Posts?.Where(IsValidStaticPost).ToArray() ?? [];
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            // Keep the last successful static feed if the file is temporarily unavailable.
+        }
+
+        var combined = _dynamicPosts.ToDictionary(post => post.Id);
+        foreach (var post in _staticPosts) combined[post.Id] = post;
+        _posts = combined.Values.OrderByDescending(post => post.Date).ThenByDescending(post => post.Id).Take(5).ToArray();
+    }
+
+    private static bool IsValidStaticPost(TelegramPost post) =>
+        post.Id > 0 &&
+        !string.IsNullOrWhiteSpace(post.Text) &&
+        Uri.TryCreate(post.Url, UriKind.Absolute, out var telegramUrl) &&
+        telegramUrl.Scheme == Uri.UriSchemeHttps &&
+        telegramUrl.Host.Equals("t.me", StringComparison.OrdinalIgnoreCase) &&
+        telegramUrl.AbsolutePath == $"/gattavasis/{post.Id}" &&
+        Uri.TryCreate(post.SiteUrl, UriKind.Absolute, out var siteUrl) &&
+        siteUrl.Scheme is "https" or "http" &&
+        siteUrl.UserInfo.Length == 0 && siteUrl.IsDefaultPort &&
+        (siteUrl.Host.Equals("pianikova.com", StringComparison.OrdinalIgnoreCase) ||
+         siteUrl.Host.Equals("www.pianikova.com", StringComparison.OrdinalIgnoreCase));
+
+    private static string Excerpt(string text)
+    {
+        var normalized = string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        var characters = normalized.EnumerateRunes().ToArray();
+        return characters.Length > 360 ? string.Concat(characters.Take(359).Select(rune => rune.ToString())) + "…" : normalized;
     }
 
     public async ValueTask DisposeAsync()
@@ -79,5 +119,6 @@
     }
 
     private sealed record TelegramFeedResponse(IReadOnlyList<TelegramPost>? Posts);
-    private sealed record TelegramPost(long Id, DateTimeOffset Date, string Text, string Url);
+    private sealed record TelegramStaticFeed(int SchemaVersion, IReadOnlyList<TelegramPost>? Posts);
+    private sealed record TelegramPost(long Id, DateTimeOffset Date, string Text, string Url, string? SiteUrl = null);
 }

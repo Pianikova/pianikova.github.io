@@ -32,6 +32,9 @@ internal sealed class ContentValidationTarget(BuildPaths paths)
              feedUri.Scheme != Uri.UriSchemeHttps || feedUri.AbsolutePath != "/feed"))
             Error("content/settings/site.json", "telegramFeedUrl must be an HTTPS /feed URL.");
 
+        var telegramPosts = ReadObject(paths.TelegramPosts);
+        if (telegramPosts is not null) ValidateTelegramPosts(telegramPosts);
+
         var schedules = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
         var videos = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
         var photos = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
@@ -75,6 +78,41 @@ internal sealed class ContentValidationTarget(BuildPaths paths)
         Required(site, "id", $"content/site/{language}/site.json");
         Required(site["identity"] as JsonObject, "name", $"content/site/{language}/site.json");
         ValidateMedia(contentRoot, site["hero"]?["image"] as JsonObject, $"content/site/{language}/site.json hero.image");
+    }
+
+    private void ValidateTelegramPosts(JsonObject document)
+    {
+        const string location = "content/telegram/posts.json";
+        if (document["schemaVersion"] is not JsonValue schema || !schema.TryGetValue<int>(out var version) || version != 1)
+            Error(location, "schemaVersion must be 1.");
+        if (document["posts"] is not JsonArray posts) { Error(location, "posts must be an array."); return; }
+
+        var ids = new HashSet<long>();
+        foreach (var node in posts)
+        {
+            if (node is not JsonObject post) { Error(location, "Every post must be an object."); continue; }
+            if (post["id"] is not JsonValue idValue || !idValue.TryGetValue<long>(out var id) || id <= 0)
+            {
+                Error(location, "Every post requires a positive numeric id.");
+                continue;
+            }
+            if (!ids.Add(id)) Error(location, $"Duplicate post id: {id}");
+
+            if (post["date"] is not JsonValue dateValue || !dateValue.TryGetValue<string>(out var date) ||
+                !DateTimeOffset.TryParse(date, out _)) Error(location, $"Post {id}: date must be an ISO date-time.");
+            if (post["text"] is not JsonValue textValue || !textValue.TryGetValue<string>(out var text) ||
+                string.IsNullOrWhiteSpace(text)) Error(location, $"Post {id}: text is required.");
+            if (post["url"] is not JsonValue urlValue || !urlValue.TryGetValue<string>(out var rawUrl) ||
+                !Uri.TryCreate(rawUrl, UriKind.Absolute, out var url) || url.Scheme != Uri.UriSchemeHttps ||
+                !url.Host.Equals("t.me", StringComparison.OrdinalIgnoreCase) || url.AbsolutePath != $"/gattavasis/{id}")
+                Error(location, $"Post {id}: url must point to its post in @gattavasis.");
+            if (post["siteUrl"] is not JsonValue siteValue || !siteValue.TryGetValue<string>(out var rawSite) ||
+                !Uri.TryCreate(rawSite, UriKind.Absolute, out var siteUrl) ||
+                siteUrl.Scheme is not ("http" or "https") || siteUrl.UserInfo.Length > 0 || !siteUrl.IsDefaultPort ||
+                !(siteUrl.Host.Equals("pianikova.com", StringComparison.OrdinalIgnoreCase) ||
+                  siteUrl.Host.Equals("www.pianikova.com", StringComparison.OrdinalIgnoreCase)))
+                Error(location, $"Post {id}: siteUrl must point to pianikova.com.");
+        }
     }
 
     private void ValidateMedia(string contentRoot, JsonObject? media, string location)
