@@ -44,6 +44,7 @@ dotnet run --project build -- content-check
 
 - `Pianikova.Web` — запуск сайта с возможностью отладки Blazor WebAssembly;
 - `Build solution` — сборка решения;
+- `Import Telegram history` — интерактивный импорт старых постов Telegram в `content/telegram/posts.json`;
 - `Publish GitHub Pages` — создание production-каталога `artifacts/web/wwwroot`.
 
 ## Рекомендуемая проверка изменений
