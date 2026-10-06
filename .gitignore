@@ -68,3 +68,4 @@ nunit-*.xml
 *.user
 /src/Pianikova.Web/wwwroot/content/
 /tmp/
+/.telegram/
