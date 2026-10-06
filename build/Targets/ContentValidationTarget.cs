@@ -97,6 +97,8 @@ internal sealed class ContentValidationTarget(BuildPaths paths)
                 continue;
             }
             if (!ids.Add(id)) Error(location, $"Duplicate post id: {id}");
+            if (post["hidden"] is JsonNode hidden && (hidden is not JsonValue hiddenValue || !hiddenValue.TryGetValue<bool>(out _)))
+                Error(location, $"Post {id}: hidden must be true or false.");
 
             if (post["date"] is not JsonValue dateValue || !dateValue.TryGetValue<string>(out var date) ||
                 !DateTimeOffset.TryParse(date, out _)) Error(location, $"Post {id}: date must be an ISO date-time.");

@@ -87,7 +87,11 @@
         }
 
         var combined = _dynamicPosts.ToDictionary(post => post.Id);
-        foreach (var post in _staticPosts) combined[post.Id] = post;
+        foreach (var post in _staticPosts)
+        {
+            if (post.Hidden) combined.Remove(post.Id);
+            else combined[post.Id] = post;
+        }
         _posts = combined.Values.OrderByDescending(post => post.Date).ThenByDescending(post => post.Id).Take(5).ToArray();
     }
 
@@ -120,5 +124,5 @@
 
     private sealed record TelegramFeedResponse(IReadOnlyList<TelegramPost>? Posts);
     private sealed record TelegramStaticFeed(int SchemaVersion, IReadOnlyList<TelegramPost>? Posts);
-    private sealed record TelegramPost(long Id, DateTimeOffset Date, string Text, string Url, string? SiteUrl = null);
+    private sealed record TelegramPost(long Id, DateTimeOffset Date, string Text, string Url, string? SiteUrl = null, bool Hidden = false);
 }
