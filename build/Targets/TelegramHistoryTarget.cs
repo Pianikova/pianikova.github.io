@@ -141,6 +141,136 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
         }
     }
 
+    public async Task<int> RunExportAsync(CancellationToken cancellationToken)
+    {
+        if (Console.IsInputRedirected)
+        {
+            Console.Error.WriteLine("telegram-history-export requires an interactive terminal.");
+            return 1;
+        }
+
+        try
+        {
+            Console.WriteLine();
+            Console.WriteLine("Экспортируйте историю канала @gattavasis в Telegram Desktop: меню канала → Export chat history → JSON.");
+            Console.WriteLine("Выберите нужный период; файлы медиа для текстовой ленты не требуются.");
+            Console.WriteLine("Экспорт сохраните вне репозитория. Укажите полный путь к result.json.");
+            var exportPath = ReadText("Telegram Desktop result.json: ")?.Trim('"');
+            if (string.IsNullOrWhiteSpace(exportPath) || !File.Exists(exportPath))
+                throw new InvalidOperationException("Файл экспорта не найден.");
+
+            var firstDay = ReadDate("From (YYYY-MM-DD, Moscow time): ");
+            var lastDay = ReadDate("Through (YYYY-MM-DD, Moscow time): ");
+            if (lastDay < firstDay) throw new InvalidOperationException("The end date must be on or after the start date.");
+
+            using var document = JsonDocument.Parse(File.ReadAllText(exportPath));
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("type", out var type) || type.GetString() != "public_channel" ||
+                !root.TryGetProperty("id", out var channelId) || !channelId.TryGetInt64(out var id) || id != ChannelId ||
+                !root.TryGetProperty("messages", out var messages) || messages.ValueKind != JsonValueKind.Array)
+                throw new InvalidOperationException("Нужен JSON-экспорт истории именно канала @gattavasis, а не общий экспорт аккаунта или другого чата.");
+
+            var existing = ReadExistingPosts();
+            var ids = existing["posts"]!.AsArray()
+                .Select(post => post!["id"]!.GetValue<long>())
+                .ToHashSet();
+            var scanned = 0;
+            var matched = 0;
+            var added = 0;
+            foreach (var message in messages.EnumerateArray())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (message.ValueKind != JsonValueKind.Object ||
+                    !message.TryGetProperty("type", out var messageType) || messageType.GetString() != "message") continue;
+                scanned++;
+                if (!message.TryGetProperty("id", out var messageId) || !messageId.TryGetInt64(out var postId) || postId <= 0 ||
+                    !message.TryGetProperty("date_unixtime", out var unixDate) ||
+                    !long.TryParse(unixDate.GetString(), NumberStyles.None, CultureInfo.InvariantCulture, out var seconds))
+                    throw new InvalidOperationException("В экспорте есть пост без ID или даты date_unixtime.");
+
+                var date = DateTimeOffset.FromUnixTimeSeconds(seconds);
+                var localDay = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(date.UtcDateTime, MoscowTime));
+                if (localDay < firstDay || localDay > lastDay) continue;
+
+                var text = ExportText(message);
+                var siteUrl = FindSiteUrl(text, ExportLinks(message));
+                if (siteUrl is null) continue;
+                matched++;
+                if (!ids.Add(postId)) continue;
+
+                var normalizedText = Whitespace().Replace(text, " ").Trim();
+                if (normalizedText.Length == 0) normalizedText = siteUrl;
+                existing["posts"]!.AsArray().Add(new JsonObject
+                {
+                    ["id"] = postId,
+                    ["date"] = date.ToString("O", CultureInfo.InvariantCulture),
+                    ["text"] = normalizedText,
+                    ["url"] = $"https://t.me/{ChannelUsername}/{postId}",
+                    ["siteUrl"] = siteUrl
+                });
+                added++;
+            }
+
+            if (added > 0) await SaveAsync(existing, cancellationToken);
+            Console.WriteLine($"Scanned {scanned} posts; matched {matched}; added {added}. Existing entries were preserved.");
+            Console.WriteLine($"Static feed: {paths.TelegramPosts}");
+            if (added > 0) Console.WriteLine("Чтобы записи появились на опубликованном сайте, отправьте content/telegram/posts.json в main.");
+            else Console.WriteLine("Новых записей нет. Проверьте период и наличие ссылок на pianikova.com в постах.");
+            return 0;
+        }
+        catch (OperationCanceledException)
+        {
+            Console.Error.WriteLine("Telegram Desktop export import was cancelled.");
+            return 1;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException or ArgumentOutOfRangeException)
+        {
+            Console.Error.WriteLine($"Telegram Desktop export import failed: {exception.Message}");
+            return 1;
+        }
+    }
+
+    private static string ExportText(JsonElement message)
+    {
+        if (!message.TryGetProperty("text", out var text)) return string.Empty;
+        if (text.ValueKind == JsonValueKind.String) return text.GetString() ?? string.Empty;
+        if (text.ValueKind != JsonValueKind.Array) return string.Empty;
+        var result = new StringBuilder();
+        foreach (var part in text.EnumerateArray())
+        {
+            if (part.ValueKind == JsonValueKind.String) result.Append(part.GetString());
+            else if (part.ValueKind == JsonValueKind.Object && part.TryGetProperty("text", out var value) && value.ValueKind == JsonValueKind.String)
+                result.Append(value.GetString());
+        }
+        return result.ToString();
+    }
+
+    private static IEnumerable<string> ExportLinks(JsonElement message)
+    {
+        foreach (var propertyName in new[] { "text", "text_entities" })
+        {
+            if (!message.TryGetProperty(propertyName, out var parts) || parts.ValueKind != JsonValueKind.Array) continue;
+            foreach (var part in parts.EnumerateArray())
+                if (part.ValueKind == JsonValueKind.Object && part.TryGetProperty("href", out var href) && href.ValueKind == JsonValueKind.String)
+                    yield return href.GetString()!;
+        }
+
+        if (!message.TryGetProperty("inline_bot_buttons", out var rows) || rows.ValueKind != JsonValueKind.Array) yield break;
+        foreach (var row in rows.EnumerateArray())
+        {
+            if (row.ValueKind != JsonValueKind.Array) continue;
+            foreach (var button in row.EnumerateArray())
+            {
+                if (button.ValueKind != JsonValueKind.Object ||
+                    !button.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String ||
+                    type.GetString() is not ("url" or "auth" or "web_view" or "simple_web_view") ||
+                    !button.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.String) continue;
+                yield return data.GetString()!;
+            }
+        }
+    }
+
     private static void PrintInstructions()
     {
         Console.WriteLine();
@@ -189,14 +319,6 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
     {
         var candidates = new List<string>();
         var text = message.message ?? string.Empty;
-        var fullUrls = FullUrl().Matches(text);
-        candidates.AddRange(fullUrls.Select(match => match.Value));
-        foreach (Match match in BareSite().Matches(text))
-        {
-            var site = match.Groups["site"];
-            if (fullUrls.Any(url => site.Index >= url.Index && site.Index < url.Index + url.Length)) continue;
-            candidates.Add(site.Value);
-        }
         if (message.entities is not null)
             candidates.AddRange(message.entities.OfType<MessageEntityTextUrl>().Select(entity => entity.url));
         if (message.media is MessageMediaWebPage { webpage: WebPage page })
@@ -206,6 +328,21 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
             candidates.AddRange(markup.rows.SelectMany(row => row.buttons).OfType<KeyboardButtonUrl>().Select(button => button.url));
             candidates.AddRange(markup.rows.SelectMany(row => row.buttons).OfType<KeyboardButtonUrlAuth>().Select(button => button.url));
         }
+        return FindSiteUrl(text, candidates);
+    }
+
+    private static string? FindSiteUrl(string text, IEnumerable<string> linkedUrls)
+    {
+        var candidates = new List<string>();
+        var fullUrls = FullUrl().Matches(text);
+        candidates.AddRange(fullUrls.Select(match => match.Value));
+        foreach (Match match in BareSite().Matches(text))
+        {
+            var site = match.Groups["site"];
+            if (fullUrls.Any(url => site.Index >= url.Index && site.Index < url.Index + url.Length)) continue;
+            candidates.Add(site.Value);
+        }
+        candidates.AddRange(linkedUrls);
         return candidates.Select(NormalizeSiteUrl).FirstOrDefault(url => url is not null);
     }
 

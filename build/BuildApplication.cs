@@ -22,6 +22,13 @@ internal sealed class BuildApplication(
             var import = await telegramHistory.RunAsync(cancellationToken);
             return import == 0 ? contentValidation.Run() : import;
         }
+        if (target is "telegram-history-export")
+        {
+            var before = contentValidation.Run();
+            if (before != 0) return before;
+            var import = await telegramHistory.RunExportAsync(cancellationToken);
+            return import == 0 ? contentValidation.Run() : import;
+        }
         if (target is not ("build" or "web" or "local-web")) return await HelpAsync();
 
         var validationResult = contentValidation.Run();
@@ -44,6 +51,7 @@ internal sealed class BuildApplication(
         Console.WriteLine("  web                    Publish GitHub Pages artifact");
         Console.WriteLine("  local-web [--no-browser]  Run the site locally (editor at /admin)");
         Console.WriteLine("  telegram-history       Import channel posts for a date range into content/telegram/posts.json");
+        Console.WriteLine("  telegram-history-export  Import a Telegram Desktop channel JSON export without API credentials");
         return Task.FromResult(0);
     }
 }
