@@ -28,6 +28,7 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
         string? phone = null;
         try
         {
+            PrintInstructions();
             var firstDay = ReadDate("From (YYYY-MM-DD, Moscow time): ");
             var lastDay = ReadDate("Through (YYYY-MM-DD, Moscow time): ");
             if (lastDay < firstDay) throw new InvalidOperationException("The end date must be on or after the start date.");
@@ -121,6 +122,8 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
             if (added > 0) await SaveAsync(existing, cancellationToken);
             Console.WriteLine($"Scanned {scanned} posts; matched {matched}; added {added}. Existing entries were preserved.");
             Console.WriteLine($"Static feed: {paths.TelegramPosts}");
+            if (added > 0) Console.WriteLine("Чтобы записи появились на опубликованном сайте, отправьте content/telegram/posts.json в main.");
+            else Console.WriteLine("Новых записей нет. Проверьте период и наличие ссылок на pianikova.com в постах.");
             return 0;
         }
         catch (OperationCanceledException)
@@ -136,6 +139,21 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
             Console.Error.WriteLine($"Telegram history import failed: {message}");
             return 1;
         }
+    }
+
+    private static void PrintInstructions()
+    {
+        Console.WriteLine();
+        Console.WriteLine("Импорт старых постов канала @gattavasis");
+        Console.WriteLine("1. Откройте https://my.telegram.org/ и войдите под своим номером Telegram.");
+        Console.WriteLine("   Код для входа на сайт придёт в Telegram.");
+        Console.WriteLine("2. Откройте API development tools и создайте приложение, если его ещё нет.");
+        Console.WriteLine("   На странице приложения найдите api_id (число) и api_hash (секрет).");
+        Console.WriteLine("3. Введите ниже период по Москве, api_id, api_hash и тот же номер телефона.");
+        Console.WriteLine("   Если потребуется код входа или пароль двухэтапной проверки, введите его здесь.");
+        Console.WriteLine("   Токен бота не нужен. Не публикуйте api_hash, коды и пароль.");
+        Console.WriteLine("В JSON попадут только посты выбранного периода со ссылкой на pianikova.com.");
+        Console.WriteLine();
     }
 
     private JsonObject ReadExistingPosts()
