@@ -64,6 +64,7 @@ nunit-*.xml
 /reports/DependencyInjection/raw/
 /.vs
 **/.dev.vars
+**/.wrangler/
 *.user
 /src/Pianikova.Web/wwwroot/content/
 /tmp/
