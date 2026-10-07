@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "rubrics": [
+    {
+      "id": "stage",
+      "title": {
+        "ru": "Сцена",
+        "en": "Stage"
+      },
+      "tags": [
+        "концерт",
+        "фестиваль",
+        "репетиция"
+      ]
+    }
+  ],
+  "series": [],
+  "publishedAudio": [
+    209
+  ]
+}

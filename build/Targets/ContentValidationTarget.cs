@@ -1,13 +1,14 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Build.Targets;
 
-internal sealed class ContentValidationTarget(BuildPaths paths)
+internal sealed class ContentValidationTarget(BuildPaths paths, JournalStore journal)
 {
     private readonly List<string> _errors = [];
 
-    public int Run()
+    public int Run(bool validateJournalIndexes = true)
     {
         _errors.Clear();
         var contentRoot = Path.Combine(paths.SolutionDirectory, "content");
@@ -34,6 +35,7 @@ internal sealed class ContentValidationTarget(BuildPaths paths)
 
         var telegramPosts = ReadObject(paths.TelegramPosts);
         if (telegramPosts is not null) ValidateTelegramPosts(telegramPosts);
+        ValidateTelegramJournal(validateJournalIndexes);
 
         var schedules = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
         var videos = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
@@ -114,6 +116,64 @@ internal sealed class ContentValidationTarget(BuildPaths paths)
                 !(siteUrl.Host.Equals("pianikova.com", StringComparison.OrdinalIgnoreCase) ||
                   siteUrl.Host.Equals("www.pianikova.com", StringComparison.OrdinalIgnoreCase)))
                 Error(location, $"Post {id}: siteUrl must point to pianikova.com.");
+        }
+    }
+
+    private void ValidateTelegramJournal(bool validateIndexes)
+    {
+        if (!Directory.Exists(journal.Root)) return;
+        const string location = "content/telegram/journal";
+        JournalSettings settings;
+        IReadOnlyList<JournalPost> posts;
+        try
+        {
+            settings = journal.ReadSettings();
+            posts = journal.ReadPosts();
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or JsonException or IOException)
+        {
+            Error(location, exception.Message);
+            return;
+        }
+
+        var rubrics = settings.Rubrics.Select(rubric => rubric.Id).ToHashSet(StringComparer.Ordinal);
+        var series = settings.Series.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+        if (rubrics.Count != settings.Rubrics.Count || series.Count != settings.Series.Count)
+            Error($"{location}/{JournalStore.SettingsFile}", "Rubric and series ids must be unique.");
+
+        var ids = new HashSet<long>();
+        var messages = new HashSet<long>();
+        foreach (var post in posts)
+        {
+            var postLocation = $"{location}/{post.RelativePath}/{JournalStore.PostFile}";
+            var meta = post.Meta;
+            if (meta.Id <= 0) { Error(postLocation, "id must be a positive number."); continue; }
+            if (!ids.Add(meta.Id)) Error(postLocation, $"Duplicate issue id: {meta.Id}");
+            if (meta.Messages.Count == 0 || meta.Messages[0] != meta.Id) Error(postLocation, "messages must start with the issue id.");
+            foreach (var message in meta.Messages)
+                if (!messages.Add(message)) Error(postLocation, $"Message {message} belongs to several issues.");
+            if (!DateTimeOffset.TryParse(meta.Date, CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+                Error(postLocation, "date must be an ISO date-time.");
+            if (!string.IsNullOrWhiteSpace(meta.Rubric) && !rubrics.Contains(meta.Rubric.Trim()))
+                Error(postLocation, $"Unknown rubric: {meta.Rubric}. Add it to {JournalStore.SettingsFile}.");
+            if (!string.IsNullOrWhiteSpace(meta.Series) && !series.Contains(meta.Series.Trim()))
+                Error(postLocation, $"Unknown series: {meta.Series}. Add it to {JournalStore.SettingsFile}.");
+            var references = JournalStore.LocalReferences(post.Body).Concat(meta.Cover is null ? [] : [meta.Cover.File]);
+            foreach (var reference in references)
+            {
+                var full = Path.GetFullPath(Path.Combine(post.Directory, reference));
+                if (!full.StartsWith(post.Directory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(full))
+                    Error(postLocation, $"File does not exist in the issue folder: {reference}");
+            }
+        }
+
+        if (!validateIndexes) return;
+        var (index, search) = journal.BuildIndexes(settings, posts);
+        foreach (var (file, expected) in new[] { (JournalStore.IndexFile, index), (JournalStore.SearchFile, search) })
+        {
+            var path = Path.Combine(journal.Root, file);
+            if (!File.Exists(path) || File.ReadAllText(path).Replace("\r\n", "\n") != expected)
+                Error($"{location}/{file}", "is out of date. Run: dotnet run --project build -- telegram-journal --reindex");
         }
     }
 

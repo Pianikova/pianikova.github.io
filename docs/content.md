@@ -10,6 +10,8 @@
 | `content/schedule/{language}/schedule.json` | Афиша и архив концертов |
 | `content/videos/{language}/videos.json` | Видеозаписи |
 | `content/photos/{language}/photos.json` | Фотографии |
+| `content/telegram/posts.json` | Короткая лента Telegram на главной |
+| `content/telegram/journal` | Архив канала: выпуски Markdown, WebP и индексы, см. [Журнал Telegram](./telegram-journal.md) |
 | `content/media/images` | Изображения |
 | `content/media` | Общий каталог медиаресурсов; сейчас содержит изображения |
 | `content/articles` | Зарезервировано; статьи пока не поддерживаются приложением |

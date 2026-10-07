@@ -46,6 +46,7 @@ dotnet run --project build -- content-check
 - `Build solution` — сборка решения;
 - `Import Telegram history` — интерактивный импорт старых постов Telegram в `content/telegram/posts.json`;
 - `Import Telegram Desktop export` — импорт истории канала из локального JSON-экспорта без API-данных;
+- `Build Telegram journal` — сборка журнала `content/telegram/journal` из экспорта Telegram Desktop;
 - `Publish GitHub Pages` — создание production-каталога `artifacts/web/wwwroot`.
 
 ## Рекомендуемая проверка изменений
