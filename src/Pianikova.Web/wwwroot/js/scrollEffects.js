@@ -16,7 +16,7 @@ window.pianikovaScrollEffects = (() => {
         if (!header || !hero || !progress) return;
 
         const revealTargets = Array.from(document.querySelectorAll(
-            ".numbered-section, .press, .next-concert, .project-card, .concert-row"
+            ".numbered-section, .press, .next-concert, .project-card, .concert-row, .journal-home .journal-featured, .journal-home-grid .journal-card"
         ));
 
         revealTargets.forEach((element, index) => {

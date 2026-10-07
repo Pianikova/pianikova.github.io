@@ -14,7 +14,7 @@
 - [Настройка GitHub OAuth через Cloudflare Worker](../cloudflare/decap-oauth/README.md).
 - [Настройка автоматической ленты Telegram](../cloudflare/telegram-feed/README.md).
 - [Импорт исторических постов Telegram](./telegram-history.md).
-- [Журнал Telegram](./telegram-journal.md) — архив канала в `content/telegram/journal`.
+- [Журнал Telegram](./telegram-journal.md) — выпуски канала в `content/telegram/journal`.
 
 ## Продукт и дизайн
 

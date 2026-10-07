@@ -1,0 +1,24 @@
+@* Typographic cover for issues without photos: a toned panel with a cropped initial, a kicker and the lede. *@
+<span class="journal-type tone-@Tone @(Staff ? "has-staff" : null) @CssClass" aria-hidden="@(Decorative ? "true" : null)">
+    <span class="journal-type-glyph" aria-hidden="true">@Glyph(Text)</span>
+    <span class="journal-type-kicker">@Kicker</span>
+    <span class="journal-type-lede">@Text</span>
+</span>
+
+@code {
+    [Parameter, EditorRequired] public string Text { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Kicker { get; set; } = string.Empty;
+    [Parameter] public long Seed { get; set; }
+    [Parameter] public bool Staff { get; set; }
+    [Parameter] public bool Decorative { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+
+    private int Tone => (int)(Math.Abs(Seed) % 3);
+
+    private static string Glyph(string text)
+    {
+        foreach (var rune in text.EnumerateRunes())
+            if (Rune.IsLetterOrDigit(rune)) return rune.ToString().ToUpperInvariant();
+        return "§";
+    }
+}

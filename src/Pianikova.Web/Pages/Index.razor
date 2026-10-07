@@ -83,6 +83,7 @@ else
             {
                 <a href="#projects" @onclick="CloseMenu">@L["Projects"]</a>
             }
+            <a href="#journal" @onclick="CloseMenu">@L["Journal"]</a>
             @if (hasRepertoire)
             {
                 <a href="#repertoire" @onclick="CloseMenu">@L["Repertoire"]</a>
@@ -95,7 +96,6 @@ else
             {
                 <a href="#press" @onclick="CloseMenu">@L["Press"]</a>
             }
-            <a href="journal">@L["Journal"]</a>
             <button class="language-button" @onclick="SwitchLanguageAsync" aria-label="@L["SwitchLanguage"]">@(_language == "ru" ? "EN" : "RU")</button>
         </nav>
     </header>
@@ -287,14 +287,10 @@ else
             </section>
         }
 
-        @if (!string.IsNullOrWhiteSpace(_telegramFeedUrl))
-        {
+        @{
             var telegramChannel = content.Contacts.SocialLinks.FirstOrDefault(x => x.Service.Equals("Telegram", StringComparison.OrdinalIgnoreCase));
-            if (telegramChannel is not null)
-            {
-                <TelegramFeed FeedUrl="@_telegramFeedUrl" ChannelUrl="@telegramChannel.Url" Language="@_language" />
-            }
         }
+        <JournalSection FeedUrl="@_telegramFeedUrl" ChannelUrl="@(telegramChannel?.Url ?? "https://t.me/gattavasis")" Language="@_language" />
 
         @if (hasRepertoire)
         {

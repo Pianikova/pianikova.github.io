@@ -1,0 +1,37 @@
+@inject IJournalSource Journal
+@inject IStringLocalizer<Ui> L
+
+<a class="journal-featured" href="journal/@Issue.Id">
+    @if (Issue.Cover is { } cover)
+    {
+        <span class="journal-featured-cover" style="@JournalCard.CoverStyle(cover)">
+            <img src="@Journal.IssueAssetUrl(Issue, cover.File)" alt="" decoding="async" loading="lazy" width="@cover.Width" height="@cover.Height" />
+        </span>
+    }
+    else
+    {
+        <JournalTypeCover Text="@JournalCard.Shorten(Issue.Title ?? Issue.Excerpt, 150)" Kicker="@JournalCard.Kind(Issue, L)" Seed="Issue.Id" Staff="Issue.Audio > 0" Decorative="true" CssClass="journal-featured-cover" />
+    }
+    <span class="journal-featured-copy">
+        <span class="eyebrow">@Eyebrow</span>
+        <span class="journal-featured-title">@(Issue.Title ?? JournalCard.Shorten(Issue.Excerpt, 90))</span>
+        @if (Issue.Cover is not null || Issue.Title is not null)
+        {
+            <span class="journal-featured-excerpt">@JournalCard.Shorten(Issue.Excerpt, 260)</span>
+        }
+        <span class="journal-meta">
+            <time datetime="@Issue.Date.ToString("O")">@JournalCard.FormatDate(Issue.Date, Language)</time>
+            @if (Issue.ReadingMinutes > 0)
+            {
+                <span>@string.Format(L["JournalMinutes"], Issue.ReadingMinutes)</span>
+            }
+        </span>
+        <span class="text-link">@L["JournalRead"] <span aria-hidden="true">→</span></span>
+    </span>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public JournalIssue Issue { get; set; } = default!;
+    [Parameter, EditorRequired] public string Language { get; set; } = "ru";
+    [Parameter, EditorRequired] public string Eyebrow { get; set; } = string.Empty;
+}

@@ -12,7 +12,6 @@
   <data name="Menu" xml:space="preserve"><value>Menu</value></data>
   <data name="MainNavigation" xml:space="preserve"><value>Main navigation</value></data>
   <data name="Concerts" xml:space="preserve"><value>Concerts</value></data>
-  <data name="TelegramFeedTitle" xml:space="preserve"><value>From Telegram</value></data>
   <data name="TelegramChannel" xml:space="preserve"><value>Visit the channel</value></data>
   <data name="TelegramReadPost" xml:space="preserve"><value>Read the post</value></data>
   <data name="Listen" xml:space="preserve"><value>Listen</value></data>
@@ -67,7 +66,7 @@
   <data name="Home" xml:space="preserve"><value>Home</value></data>
   <data name="Journal" xml:space="preserve"><value>Journal</value></data>
   <data name="JournalEyebrow" xml:space="preserve"><value>Telegram channel · Katavasis</value></data>
-  <data name="JournalLead" xml:space="preserve"><value>Notes on music, the stage and travel — the channel's archive, issue by issue.</value></data>
+  <data name="JournalLead" xml:space="preserve"><value>Notes on music, the stage and travel, issue by issue.</value></data>
   <data name="JournalStats" xml:space="preserve"><value>{0} issues · since {1}</value></data>
   <data name="JournalAll" xml:space="preserve"><value>All</value></data>
   <data name="JournalSearch" xml:space="preserve"><value>Search the journal</value></data>
@@ -95,4 +94,11 @@
   <data name="JournalReactions" xml:space="preserve"><value>Reactions</value></data>
   <data name="JournalShowSpoiler" xml:space="preserve"><value>Tap to reveal</value></data>
   <data name="JournalTitle" xml:space="preserve"><value>Katavasis</value></data>
+  <data name="JournalHomeTitle" xml:space="preserve"><value>From the journal</value></data>
+  <data name="JournalKindMusic" xml:space="preserve"><value>Music</value></data>
+  <data name="JournalKindVideo" xml:space="preserve"><value>Video</value></data>
+  <data name="JournalKindEssay" xml:space="preserve"><value>Essay</value></data>
+  <data name="JournalKindNote" xml:space="preserve"><value>Note</value></data>
+  <data name="JournalAllIssues" xml:space="preserve"><value>All issues</value></data>
+  <data name="JournalRemaining" xml:space="preserve"><value>{0} left</value></data>
 </root>

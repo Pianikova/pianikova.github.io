@@ -188,7 +188,8 @@ internal sealed partial class JournalStore(BuildPaths paths)
         {
             var meta = post.Meta;
             var date = DateTimeOffset.Parse(meta.Date, CultureInfo.InvariantCulture);
-            var plain = Whitespace().Replace(Markdown.ToPlainText(post.Body, Pipeline), " ").Trim();
+            var plainLines = Markdown.ToPlainText(post.Body, Pipeline).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var plain = Whitespace().Replace(string.Join(' ', plainLines), " ").Trim();
             var words = plain.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
             var rubric = Resolve(meta.Rubric, meta.Tags, settings.Rubrics);
             var series = Resolve(meta.Series, meta.Tags, settings.Series);
@@ -207,7 +208,7 @@ internal sealed partial class JournalStore(BuildPaths paths)
                 ["date"] = meta.Date,
                 ["path"] = post.RelativePath,
                 ["title"] = meta.Title,
-                ["excerpt"] = Excerpt(plain),
+                ["excerpt"] = Excerpt(Whitespace().Replace(JoinLines(plainLines), " ").Trim()),
                 ["tags"] = new JsonArray(meta.Tags.Select(tag => (JsonNode)tag).ToArray()),
                 ["rubric"] = rubric,
                 ["series"] = series,
@@ -257,6 +258,18 @@ internal sealed partial class JournalStore(BuildPaths paths)
     {
         if (!string.IsNullOrWhiteSpace(manual)) return manual.Trim();
         return taxa.FirstOrDefault(taxon => taxon.Tags.Any(tags.Contains))?.Id;
+    }
+
+    /// <summary>Lines without closing punctuation (list items, poll answers, headings) are separated by a middle dot.</summary>
+    private static string JoinLines(IReadOnlyList<string> lines)
+    {
+        var builder = new StringBuilder();
+        foreach (var line in lines)
+        {
+            if (builder.Length > 0) builder.Append(char.IsLetterOrDigit(builder[^1]) ? " · " : " ");
+            builder.Append(line);
+        }
+        return builder.ToString();
     }
 
     private static string Excerpt(string plain)

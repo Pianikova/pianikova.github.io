@@ -12,7 +12,6 @@
   <data name="Menu" xml:space="preserve"><value>Меню</value></data>
   <data name="MainNavigation" xml:space="preserve"><value>Основная навигация</value></data>
   <data name="Concerts" xml:space="preserve"><value>Концерты</value></data>
-  <data name="TelegramFeedTitle" xml:space="preserve"><value>Из Telegram</value></data>
   <data name="TelegramChannel" xml:space="preserve"><value>Читать канал</value></data>
   <data name="TelegramReadPost" xml:space="preserve"><value>Читать публикацию</value></data>
   <data name="Listen" xml:space="preserve"><value>Слушать</value></data>
@@ -67,7 +66,7 @@
   <data name="Home" xml:space="preserve"><value>Главная</value></data>
   <data name="Journal" xml:space="preserve"><value>Журнал</value></data>
   <data name="JournalEyebrow" xml:space="preserve"><value>Telegram-канал · Катавасис</value></data>
-  <data name="JournalLead" xml:space="preserve"><value>Заметки о музыке, сцене и путешествиях — архив канала, выпуск за выпуском.</value></data>
+  <data name="JournalLead" xml:space="preserve"><value>Заметки о музыке, сцене и путешествиях — выпуск за выпуском.</value></data>
   <data name="JournalStats" xml:space="preserve"><value>Выпусков: {0} · с {1} года</value></data>
   <data name="JournalAll" xml:space="preserve"><value>Все</value></data>
   <data name="JournalSearch" xml:space="preserve"><value>Поиск по журналу</value></data>
@@ -95,4 +94,11 @@
   <data name="JournalReactions" xml:space="preserve"><value>Реакции</value></data>
   <data name="JournalShowSpoiler" xml:space="preserve"><value>Нажмите, чтобы открыть</value></data>
   <data name="JournalTitle" xml:space="preserve"><value>Катавасис</value></data>
+  <data name="JournalHomeTitle" xml:space="preserve"><value>Из журнала</value></data>
+  <data name="JournalKindMusic" xml:space="preserve"><value>Музыка</value></data>
+  <data name="JournalKindVideo" xml:space="preserve"><value>Видео</value></data>
+  <data name="JournalKindEssay" xml:space="preserve"><value>Эссе</value></data>
+  <data name="JournalKindNote" xml:space="preserve"><value>Заметка</value></data>
+  <data name="JournalAllIssues" xml:space="preserve"><value>Все выпуски</value></data>
+  <data name="JournalRemaining" xml:space="preserve"><value>Осталось {0}</value></data>
 </root>

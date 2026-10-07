@@ -11,7 +11,7 @@
     }
     else
     {
-        <span class="journal-card-quote">@Shorten(Issue.Excerpt, 170)</span>
+        <JournalTypeCover Text="@Shorten(Issue.Title ?? Issue.Excerpt, Issue.Title is null ? 130 : 90)" Kicker="@Kind(Issue, L)" Seed="Issue.Id" Staff="Issue.Audio > 0" CssClass="journal-card-type" />
     }
     <span class="journal-card-body">
         <span class="journal-meta">
@@ -21,11 +21,18 @@
                 <span>@string.Format(L["JournalMinutes"], Issue.ReadingMinutes)</span>
             }
         </span>
-        @if (!string.IsNullOrWhiteSpace(Issue.Title))
+        @if (Issue.Cover is null)
+        {
+            @if (Issue.Title is not null && !string.IsNullOrWhiteSpace(Issue.Excerpt))
+            {
+                <span class="journal-card-excerpt">@Shorten(Issue.Excerpt, 120)</span>
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(Issue.Title))
         {
             <span class="journal-card-title">@Issue.Title</span>
         }
-        else if (Issue.Cover is not null)
+        else
         {
             <span class="journal-card-excerpt">@Shorten(Issue.Excerpt, 120)</span>
         }
@@ -64,6 +71,9 @@
         var cut = text.LastIndexOf(' ', length);
         return text[..(cut > length / 2 ? cut : length)].TrimEnd(',', '.', ';', ':', ' ', '—', '-', '…') + "…";
     }
+
+    public static string Kind(JournalIssue issue, IStringLocalizer<Ui> l) =>
+        issue.Audio > 0 ? l["JournalKindMusic"] : issue.Videos > 0 && issue.Photos == 0 ? l["JournalKindVideo"] : issue.ReadingMinutes >= 3 ? l["JournalKindEssay"] : l["JournalKindNote"];
 
     public static string SmallFile(string file) =>
         file.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) ? file[..^5] + "-480.webp" : file;

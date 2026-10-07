@@ -73,27 +73,7 @@ else
         @if (featured is not null)
         {
             <section class="journal-lead-issue section-pad" aria-label="@L["JournalLatest"]">
-                <a class="journal-featured" href="journal/@featured.Id">
-                    @if (featured.Cover is { } cover)
-                    {
-                        <span class="journal-featured-cover" style="@JournalCard.CoverStyle(cover)">
-                            <img src="@Journal.IssueAssetUrl(featured, cover.File)" alt="" decoding="async" width="@cover.Width" height="@cover.Height" />
-                        </span>
-                    }
-                    <span class="journal-featured-copy">
-                        <span class="eyebrow">@L["JournalLatest"]</span>
-                        <span class="journal-featured-title">@(featured.Title ?? JournalCard.Shorten(featured.Excerpt, 90))</span>
-                        <span class="journal-featured-excerpt">@JournalCard.Shorten(featured.Excerpt, 260)</span>
-                        <span class="journal-meta">
-                            <time datetime="@featured.Date.ToString("O")">@JournalCard.FormatDate(featured.Date, _language)</time>
-                            @if (featured.ReadingMinutes > 0)
-                            {
-                                <span>@string.Format(L["JournalMinutes"], featured.ReadingMinutes)</span>
-                            }
-                        </span>
-                        <span class="text-link">@L["JournalRead"] <span aria-hidden="true">→</span></span>
-                    </span>
-                </a>
+                <JournalFeatured Issue="featured" Language="@_language" Eyebrow="@L["JournalLatest"]" />
 
                 @if (favorites.Length > 0)
                 {
@@ -129,6 +109,10 @@ else
         }
 
         <section class="journal-browse section-pad" id="issues">
+            <header class="journal-browse-heading">
+                <h2>@L["JournalAllIssues"]</h2>
+                <span>@issues.Count</span>
+            </header>
             <div class="journal-toolbar">
                 <label class="journal-search">
                     <span class="visually-hidden">@L["JournalSearch"]</span>
@@ -173,7 +157,13 @@ else
                 @if (grid.Length > _visible)
                 {
                     <div class="journal-more">
-                        <button type="button" class="button button-quiet" @onclick="() => _visible += PageSize">@L["JournalMore"] <span aria-hidden="true">↓</span></button>
+                        <button type="button" class="journal-more-button" @onclick="() => _visible += PageSize">
+                            <span class="journal-more-copy">
+                                <span class="journal-more-label">@L["JournalMore"]</span>
+                                <span class="journal-more-count">@string.Format(L["JournalRemaining"], grid.Length - _visible)</span>
+                            </span>
+                            <span class="journal-more-icon" aria-hidden="true">↓</span>
+                        </button>
                     </div>
                 }
             }

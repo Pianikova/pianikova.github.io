@@ -1,0 +1,192 @@
+@implements IAsyncDisposable
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject IStringLocalizer<Ui> L
+@inject ISiteContentSource Content
+@inject IJournalSource Journal
+
+@if (_items.Count > 0)
+{
+    var lead = _items[0];
+    <section id="journal" class="journal-home section-pad numbered-section" aria-labelledby="journal-home-title">
+        <header class="section-heading">
+            <div>
+                <p class="eyebrow">@L["JournalEyebrow"]</p>
+                <h2 id="journal-home-title">@L["JournalHomeTitle"]</h2>
+            </div>
+            <div class="journal-home-links">
+                <a class="text-link" href="journal">@L["JournalFullJournal"] <span aria-hidden="true">→</span></a>
+                <a class="text-link" href="@ChannelUrl" target="_blank" rel="noopener noreferrer">@L["TelegramChannel"] <span aria-hidden="true">↗</span></a>
+            </div>
+        </header>
+
+        @if (lead.Issue is not null)
+        {
+            <JournalFeatured Issue="lead.Issue" Language="@Language" Eyebrow="@L["JournalLatest"]" />
+        }
+        else
+        {
+            <a class="journal-featured" href="@lead.Post!.Url" target="_blank" rel="noopener noreferrer">
+                <JournalTypeCover Text="@JournalCard.Shorten(Normalize(lead.Post.Text), 150)" Kicker="Telegram" Seed="lead.Post.Id" Decorative="true" CssClass="journal-featured-cover" />
+                <span class="journal-featured-copy">
+                    <span class="eyebrow">Telegram · @L["JournalLatest"]</span>
+                    <span class="journal-featured-title">@JournalCard.Shorten(Normalize(lead.Post.Text), 90)</span>
+                    <span class="journal-meta"><time datetime="@lead.Date.ToString("O")">@JournalCard.FormatDate(lead.Date, Language)</time></span>
+                    <span class="text-link">@L["TelegramReadPost"] <span aria-hidden="true">↗</span></span>
+                </span>
+            </a>
+        }
+
+        @if (_items.Count > 1)
+        {
+            <div class="journal-home-grid">
+                @foreach (var item in _items.Skip(1))
+                {
+                    if (item.Issue is not null)
+                    {
+                        <JournalCard Issue="item.Issue" Language="@Language" />
+                    }
+                    else
+                    {
+                        <a class="journal-card journal-card-text" href="@item.Post!.Url" target="_blank" rel="noopener noreferrer">
+                            <JournalTypeCover Text="@JournalCard.Shorten(Normalize(item.Post.Text), 130)" Kicker="Telegram" Seed="item.Post.Id" CssClass="journal-card-type" />
+                            <span class="journal-card-body">
+                                <span class="journal-meta"><span>Telegram</span><time datetime="@item.Date.ToString("O")">@JournalCard.FormatDate(item.Date, Language)</time></span>
+                                <span class="journal-card-counts"><span>@L["TelegramReadPost"] ↗</span></span>
+                            </span>
+                        </a>
+                    }
+                }
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private const int ItemCount = 4;
+
+    [Parameter] public string? FeedUrl { get; set; }
+    [Parameter, EditorRequired] public string ChannelUrl { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Language { get; set; } = "ru";
+
+    private readonly CancellationTokenSource _dispose = new();
+    private IReadOnlyList<JournalIssue> _issues = [];
+    private IReadOnlyList<TelegramPost> _dynamicPosts = [];
+    private IReadOnlyList<TelegramPost> _staticPosts = [];
+    private IReadOnlyList<HomeItem> _items = [];
+    private Task? _refreshTask;
+    private bool _scrollEffectsRefreshed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _issues = (await Journal.LoadIndexAsync(_dispose.Token)).Issues; }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException or InvalidOperationException or TaskCanceledException)
+        {
+            // Without the journal the section still shows fresh Telegram posts.
+        }
+
+        await RefreshAsync(_dispose.Token);
+        if (!string.IsNullOrWhiteSpace(FeedUrl)) _refreshTask = RefreshLoopAsync(_dispose.Token);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The section appears after the page has set up its scroll effects; refresh them so the menu
+        // highlights "Journal" and the section fades in like the others.
+        if (_items.Count == 0 || _scrollEffectsRefreshed) return;
+        _scrollEffectsRefreshed = true;
+        await JS.InvokeVoidAsync("pianikovaScrollEffects.initialize");
+    }
+
+    private async Task RefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(5));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                if (!await JS.InvokeAsync<bool>("pianikovaTelegramFeed.isVisible", cancellationToken)) continue;
+                await RefreshAsync(cancellationToken);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+    }
+
+    private async Task RefreshAsync(CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(FeedUrl))
+        {
+            using var dynamicTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            dynamicTimeout.CancelAfter(TimeSpan.FromSeconds(8));
+            try
+            {
+                var feed = await Http.GetFromJsonAsync<TelegramFeedResponse>(FeedUrl, dynamicTimeout.Token);
+                if (feed is not null) _dynamicPosts = feed.Posts ?? [];
+            }
+            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+            {
+                // Keep the last successful dynamic feed if the endpoint is temporarily unavailable.
+            }
+        }
+
+        using var staticTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        staticTimeout.CancelAfter(TimeSpan.FromSeconds(8));
+        try
+        {
+            var staticUrl = Content.AssetUrl("telegram/posts.json");
+            var feed = await Http.GetFromJsonAsync<TelegramStaticFeed>($"{staticUrl}?refresh={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}", staticTimeout.Token);
+            if (feed?.SchemaVersion == 1) _staticPosts = feed.Posts?.Where(IsValidStaticPost).ToArray() ?? [];
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            // Keep the last successful static feed if the file is temporarily unavailable.
+        }
+
+        var combined = _dynamicPosts.ToDictionary(post => post.Id);
+        foreach (var post in _staticPosts)
+        {
+            if (post.Hidden) combined.Remove(post.Id);
+            else combined[post.Id] = post;
+        }
+
+        // Posts already exported to the journal appear there as issues; only newer ones are shown as live posts.
+        var latestIssue = _issues.Count > 0 ? _issues.Max(issue => issue.Date) : DateTimeOffset.MinValue;
+        var issueIds = _issues.Select(issue => issue.Id).ToHashSet();
+        var fresh = combined.Values
+            .Where(post => post.Date > latestIssue && !issueIds.Contains(post.Id))
+            .Select(post => new HomeItem(post.Date, null, post));
+        _items = fresh
+            .Concat(_issues.Take(ItemCount).Select(issue => new HomeItem(issue.Date, issue, null)))
+            .OrderByDescending(item => item.Date)
+            .Take(ItemCount)
+            .ToArray();
+    }
+
+    private static bool IsValidStaticPost(TelegramPost post) =>
+        post.Id > 0 &&
+        !string.IsNullOrWhiteSpace(post.Text) &&
+        Uri.TryCreate(post.Url, UriKind.Absolute, out var telegramUrl) &&
+        telegramUrl.Scheme == Uri.UriSchemeHttps &&
+        telegramUrl.Host.Equals("t.me", StringComparison.OrdinalIgnoreCase) &&
+        telegramUrl.AbsolutePath == $"/gattavasis/{post.Id}" &&
+        Uri.TryCreate(post.SiteUrl, UriKind.Absolute, out var siteUrl) &&
+        siteUrl.Scheme is "https" or "http" &&
+        siteUrl.UserInfo.Length == 0 && siteUrl.IsDefaultPort &&
+        (siteUrl.Host.Equals("pianikova.com", StringComparison.OrdinalIgnoreCase) ||
+         siteUrl.Host.Equals("www.pianikova.com", StringComparison.OrdinalIgnoreCase));
+
+    private static string Normalize(string text) => string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    public async ValueTask DisposeAsync()
+    {
+        await _dispose.CancelAsync();
+        if (_refreshTask is not null) await _refreshTask;
+        _dispose.Dispose();
+    }
+
+    private sealed record HomeItem(DateTimeOffset Date, JournalIssue? Issue, TelegramPost? Post);
+    private sealed record TelegramFeedResponse(IReadOnlyList<TelegramPost>? Posts);
+    private sealed record TelegramStaticFeed(int SchemaVersion, IReadOnlyList<TelegramPost>? Posts);
+    private sealed record TelegramPost(long Id, DateTimeOffset Date, string Text, string Url, string? SiteUrl = null, bool Hidden = false);
+}
