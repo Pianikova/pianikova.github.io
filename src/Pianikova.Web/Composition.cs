@@ -10,5 +10,6 @@ internal partial class Composition : ServiceProviderFactory<Composition>
             .Hint(Hint.ThreadSafe, "Off")
             .Arg<HttpClient>("httpClient")
             .Root<ISiteContentSource>()
-            .Singleton<SiteContentSource>();
+            .Root<IJournalSource>()
+            .Singleton<SiteContentSource, JournalSource>();
 }

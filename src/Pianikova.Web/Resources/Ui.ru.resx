@@ -63,4 +63,36 @@
   <data name="SoldOut" xml:space="preserve"><value>Билеты проданы</value></data>
   <data name="FreeAdmission" xml:space="preserve"><value>Вход свободный</value></data>
   <data name="DetailsComingSoon" xml:space="preserve"><value>Подробности скоро</value></data>
+  <data name="ArtistName" xml:space="preserve"><value>Юлия Пьяникова</value></data>
+  <data name="Home" xml:space="preserve"><value>Главная</value></data>
+  <data name="Journal" xml:space="preserve"><value>Журнал</value></data>
+  <data name="JournalEyebrow" xml:space="preserve"><value>Telegram-канал · Катавасис</value></data>
+  <data name="JournalLead" xml:space="preserve"><value>Заметки о музыке, сцене и путешествиях — архив канала, выпуск за выпуском.</value></data>
+  <data name="JournalStats" xml:space="preserve"><value>Выпусков: {0} · с {1} года</value></data>
+  <data name="JournalAll" xml:space="preserve"><value>Все</value></data>
+  <data name="JournalSearch" xml:space="preserve"><value>Поиск по журналу</value></data>
+  <data name="JournalRandom" xml:space="preserve"><value>Открыть наугад</value></data>
+  <data name="JournalFavorites" xml:space="preserve"><value>Любимое читателями</value></data>
+  <data name="JournalOnThisDay" xml:space="preserve"><value>В этот день</value></data>
+  <data name="JournalLatest" xml:space="preserve"><value>Свежий выпуск</value></data>
+  <data name="JournalRead" xml:space="preserve"><value>Читать</value></data>
+  <data name="JournalMore" xml:space="preserve"><value>Показать ещё</value></data>
+  <data name="JournalNothingFound" xml:space="preserve"><value>Ничего не найдено. Попробуйте другое слово или сбросьте фильтры.</value></data>
+  <data name="JournalReset" xml:space="preserve"><value>Сбросить фильтры</value></data>
+  <data name="JournalMinutes" xml:space="preserve"><value>{0} мин чтения</value></data>
+  <data name="JournalEarlier" xml:space="preserve"><value>Раньше</value></data>
+  <data name="JournalLater" xml:space="preserve"><value>Позже</value></data>
+  <data name="JournalOpenInTelegram" xml:space="preserve"><value>Открыть в Telegram</value></data>
+  <data name="JournalListenInTelegram" xml:space="preserve"><value>Слушать в Telegram</value></data>
+  <data name="JournalWatchInTelegram" xml:space="preserve"><value>Смотреть в Telegram</value></data>
+  <data name="JournalBack" xml:space="preserve"><value>Все выпуски</value></data>
+  <data name="JournalRussianOnly" xml:space="preserve"><value></value></data>
+  <data name="JournalNotFound" xml:space="preserve"><value>Такой выпуск не найден.</value></data>
+  <data name="JournalSeries" xml:space="preserve"><value>Цикл</value></data>
+  <data name="JournalFullJournal" xml:space="preserve"><value>Весь журнал</value></data>
+  <data name="JournalPhotos" xml:space="preserve"><value>Фото</value></data>
+  <data name="JournalAudio" xml:space="preserve"><value>Аудио</value></data>
+  <data name="JournalReactions" xml:space="preserve"><value>Реакции</value></data>
+  <data name="JournalShowSpoiler" xml:space="preserve"><value>Нажмите, чтобы открыть</value></data>
+  <data name="JournalTitle" xml:space="preserve"><value>Катавасис</value></data>
 </root>

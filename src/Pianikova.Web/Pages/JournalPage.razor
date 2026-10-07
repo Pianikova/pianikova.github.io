@@ -1,0 +1,275 @@
+@page "/journal"
+@inject IJournalSource Journal
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject IStringLocalizer<Ui> L
+
+<PageTitle>@L["JournalTitle"] — @L["Journal"] · @L["ArtistName"]</PageTitle>
+
+<JournalHeader Language="@_language" />
+
+@if (_error is not null)
+{
+    <main class="fatal-state">
+        <p class="eyebrow">@L["ContentUnavailable"]</p>
+        <h1>@L["LoadFailed"]</h1>
+        <p>@_error</p>
+        <button class="button button-primary" @onclick="LoadAsync">@L["TryAgain"]</button>
+    </main>
+}
+else if (_index is null)
+{
+    <main class="loading-state" aria-live="polite">
+        <span class="loading-line"></span>
+        <p>@L["Loading"]</p>
+    </main>
+}
+else
+{
+    var issues = _index.Issues;
+    var filtered = Filter(issues).ToArray();
+    var browsing = _year is null && _rubric is null && string.IsNullOrWhiteSpace(_query);
+    var featured = browsing ? issues.FirstOrDefault() : null;
+    var grid = featured is null ? filtered : filtered.Where(issue => issue.Id != featured.Id).ToArray();
+    var favorites = browsing ? issues.Where(issue => issue.Id != featured?.Id).OrderByDescending(issue => issue.Reactions).Take(5).ToArray() : [];
+    var today = DateTimeOffset.Now;
+    var onThisDay = browsing ? issues.Where(issue => issue.Date.Month == today.Month && issue.Date.Day == today.Day && issue.Date.Year < today.Year).ToArray() : [];
+    var years = issues.GroupBy(issue => issue.Date.Year).OrderByDescending(group => group.Key).ToArray();
+    var monthMax = Math.Max(1, issues.GroupBy(issue => (issue.Date.Year, issue.Date.Month)).Max(group => group.Count()));
+
+    <main class="journal" id="top">
+        <section class="journal-masthead section-pad">
+            <p class="eyebrow">@L["JournalEyebrow"]</p>
+            <h1>@L["JournalTitle"]</h1>
+            <div class="journal-masthead-copy">
+                <p class="journal-lead">@L["JournalLead"]</p>
+                <p class="journal-stats">
+                    @string.Format(L["JournalStats"], issues.Count, issues.Count > 0 ? issues.Min(issue => issue.Date.Year) : today.Year)
+                    @if (!string.IsNullOrWhiteSpace(L["JournalRussianOnly"]))
+                    {
+                        <span> · @L["JournalRussianOnly"]</span>
+                    }
+                </p>
+            </div>
+            <div class="journal-years" role="group" aria-label="@L["Journal"]">
+                @foreach (var year in years)
+                {
+                    var value = year.Key;
+                    <button type="button" class="journal-year @(_year == value ? "active" : null)" aria-pressed="@(_year == value)" @onclick="() => ToggleYear(value)">
+                        <span class="journal-year-bars" aria-hidden="true">
+                            @for (var month = 1; month <= 12; month++)
+                            {
+                                var count = year.Count(issue => issue.Date.Month == month);
+                                <span style="height:@(count == 0 ? 2 : 6 + 94 * count / monthMax)%" class="@(count == 0 ? "empty" : null)"></span>
+                            }
+                        </span>
+                        <span class="journal-year-label">@value</span>
+                        <span class="journal-year-count">@year.Count()</span>
+                    </button>
+                }
+            </div>
+        </section>
+
+        @if (featured is not null)
+        {
+            <section class="journal-lead-issue section-pad" aria-label="@L["JournalLatest"]">
+                <a class="journal-featured" href="journal/@featured.Id">
+                    @if (featured.Cover is { } cover)
+                    {
+                        <span class="journal-featured-cover" style="@JournalCard.CoverStyle(cover)">
+                            <img src="@Journal.IssueAssetUrl(featured, cover.File)" alt="" decoding="async" width="@cover.Width" height="@cover.Height" />
+                        </span>
+                    }
+                    <span class="journal-featured-copy">
+                        <span class="eyebrow">@L["JournalLatest"]</span>
+                        <span class="journal-featured-title">@(featured.Title ?? JournalCard.Shorten(featured.Excerpt, 90))</span>
+                        <span class="journal-featured-excerpt">@JournalCard.Shorten(featured.Excerpt, 260)</span>
+                        <span class="journal-meta">
+                            <time datetime="@featured.Date.ToString("O")">@JournalCard.FormatDate(featured.Date, _language)</time>
+                            @if (featured.ReadingMinutes > 0)
+                            {
+                                <span>@string.Format(L["JournalMinutes"], featured.ReadingMinutes)</span>
+                            }
+                        </span>
+                        <span class="text-link">@L["JournalRead"] <span aria-hidden="true">→</span></span>
+                    </span>
+                </a>
+
+                @if (favorites.Length > 0)
+                {
+                    <aside class="journal-favorites">
+                        <h2 class="eyebrow">@L["JournalFavorites"]</h2>
+                        <ol>
+                            @foreach (var issue in favorites)
+                            {
+                                <li>
+                                    <a href="journal/@issue.Id">
+                                        <span class="journal-favorite-title">@(issue.Title ?? JournalCard.Shorten(issue.Excerpt, 80))</span>
+                                        <span class="journal-meta"><time>@JournalCard.FormatDate(issue.Date, _language)</time><span>♥ @issue.Reactions</span></span>
+                                    </a>
+                                </li>
+                            }
+                        </ol>
+                    </aside>
+                }
+            </section>
+        }
+
+        @if (onThisDay.Length > 0)
+        {
+            <section class="journal-on-this-day section-pad">
+                <h2 class="eyebrow">@L["JournalOnThisDay"] · @today.ToString("d MMMM", CultureInfo.GetCultureInfo(_language == "ru" ? "ru-RU" : "en-GB"))</h2>
+                <div class="journal-strip">
+                    @foreach (var issue in onThisDay)
+                    {
+                        <JournalCard Issue="issue" Language="@_language" />
+                    }
+                </div>
+            </section>
+        }
+
+        <section class="journal-browse section-pad" id="issues">
+            <div class="journal-toolbar">
+                <label class="journal-search">
+                    <span class="visually-hidden">@L["JournalSearch"]</span>
+                    <span aria-hidden="true" class="journal-search-icon">⌕</span>
+                    <input type="search" placeholder="@L["JournalSearch"]" @bind="_query" @bind:event="oninput" @bind:after="OnQueryChangedAsync" />
+                </label>
+                @if (_index.Rubrics.Count > 0)
+                {
+                    <div class="journal-chips" role="group">
+                        <button type="button" class="journal-chip @(_rubric is null ? "active" : null)" @onclick="() => SelectRubric(null)">@L["JournalAll"]</button>
+                        @foreach (var rubric in _index.Rubrics)
+                        {
+                            var id = rubric.Id;
+                            <button type="button" class="journal-chip @(_rubric == id ? "active" : null)" @onclick="() => SelectRubric(id)">
+                                @Title(rubric.Title) <small>@rubric.Count</small>
+                            </button>
+                        }
+                    </div>
+                }
+                <button type="button" class="journal-random" @onclick="OpenRandom"><span aria-hidden="true">⤨</span> @L["JournalRandom"]</button>
+            </div>
+
+            @if (!browsing)
+            {
+                <p class="journal-results">
+                    @filtered.Length · <button type="button" class="journal-reset" @onclick="ResetFilters">@L["JournalReset"]</button>
+                </p>
+            }
+
+            @if (grid.Length == 0)
+            {
+                <p class="empty-message">@L["JournalNothingFound"]</p>
+            }
+            else
+            {
+                <div class="journal-grid">
+                    @foreach (var issue in grid.Take(_visible))
+                    {
+                        <JournalCard Issue="issue" Language="@_language" @key="issue.Id" />
+                    }
+                </div>
+                @if (grid.Length > _visible)
+                {
+                    <div class="journal-more">
+                        <button type="button" class="button button-quiet" @onclick="() => _visible += PageSize">@L["JournalMore"] <span aria-hidden="true">↓</span></button>
+                    </div>
+                }
+            }
+        </section>
+    </main>
+
+    <JournalFooter Language="@_language" />
+}
+
+@code {
+    private const int PageSize = 24;
+    private JournalIndex? _index;
+    private IReadOnlyDictionary<long, string>? _search;
+    private string? _error;
+    private string _language = "ru";
+    private int? _year;
+    private string? _rubric;
+    private string _query = string.Empty;
+    private int _visible = PageSize;
+
+    protected override Task OnInitializedAsync()
+    {
+        _language = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru" ? "ru" : "en";
+        return LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_index is not null) await JS.InvokeVoidAsync("pianikovaJournal.page");
+    }
+
+    private async Task LoadAsync()
+    {
+        _error = null;
+        try
+        {
+            await JS.InvokeVoidAsync("pianikovaLanguage.apply", _language);
+            _index = await Journal.LoadIndexAsync();
+        }
+        catch (Exception exception) { _error = exception.Message; }
+    }
+
+    private IEnumerable<JournalIssue> Filter(IEnumerable<JournalIssue> issues)
+    {
+        if (_year is { } year) issues = issues.Where(issue => issue.Date.Year == year);
+        if (_rubric is { } rubric) issues = issues.Where(issue => issue.Rubric == rubric);
+        var query = JournalSource.Normalize(_query.Trim());
+        if (query.Length > 0)
+        {
+            var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            issues = issues.Where(issue =>
+            {
+                var text = _search?.GetValueOrDefault(issue.Id) ?? JournalSource.Normalize($"{issue.Title} {issue.Excerpt} {string.Join(' ', issue.Tags)}");
+                return words.All(word => text.Contains(word, StringComparison.Ordinal));
+            });
+        }
+        return issues;
+    }
+
+    private async Task OnQueryChangedAsync()
+    {
+        _visible = PageSize;
+        if (_search is not null || string.IsNullOrWhiteSpace(_query)) return;
+        try { _search = await Journal.LoadSearchAsync(); }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException or TaskCanceledException)
+        {
+            // Search falls back to titles and excerpts from the index.
+        }
+    }
+
+    private void ToggleYear(int year)
+    {
+        _year = _year == year ? null : year;
+        _visible = PageSize;
+    }
+
+    private void SelectRubric(string? rubric)
+    {
+        _rubric = rubric;
+        _visible = PageSize;
+    }
+
+    private void ResetFilters()
+    {
+        _year = null;
+        _rubric = null;
+        _query = string.Empty;
+        _visible = PageSize;
+    }
+
+    private void OpenRandom()
+    {
+        if (_index is not { Issues.Count: > 0 } index) return;
+        Navigation.NavigateTo($"journal/{index.Issues[Random.Shared.Next(index.Issues.Count)].Id}");
+    }
+
+    private string Title(IReadOnlyDictionary<string, string> title) =>
+        title.GetValueOrDefault(_language) ?? title.GetValueOrDefault("ru") ?? title.Values.FirstOrDefault() ?? string.Empty;
+}

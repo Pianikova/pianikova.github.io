@@ -1,0 +1,73 @@
+@inject IJournalSource Journal
+@inject IStringLocalizer<Ui> L
+
+<a class="journal-card @(Issue.Cover is null ? "journal-card-text" : null) @CssClass" href="journal/@Issue.Id">
+    @if (Issue.Cover is { } cover)
+    {
+        <span class="journal-card-cover" style="@CoverStyle(cover)">
+            <img src="@Journal.IssueAssetUrl(Issue, SmallFile(cover.File))" alt="" loading="lazy" decoding="async"
+                 width="@cover.Width" height="@cover.Height" />
+        </span>
+    }
+    else
+    {
+        <span class="journal-card-quote">@Shorten(Issue.Excerpt, 170)</span>
+    }
+    <span class="journal-card-body">
+        <span class="journal-meta">
+            <time datetime="@Issue.Date.ToString("O")">@FormatDate(Issue.Date, Language)</time>
+            @if (Issue.ReadingMinutes > 0)
+            {
+                <span>@string.Format(L["JournalMinutes"], Issue.ReadingMinutes)</span>
+            }
+        </span>
+        @if (!string.IsNullOrWhiteSpace(Issue.Title))
+        {
+            <span class="journal-card-title">@Issue.Title</span>
+        }
+        else if (Issue.Cover is not null)
+        {
+            <span class="journal-card-excerpt">@Shorten(Issue.Excerpt, 120)</span>
+        }
+        <span class="journal-card-counts">
+            @if (Issue.Photos > 0)
+            {
+                <span title="@L["JournalPhotos"]"><span aria-hidden="true">◫</span> @Issue.Photos</span>
+            }
+            @if (Issue.Audio > 0)
+            {
+                <span title="@L["JournalAudio"]"><span aria-hidden="true">♪</span> @Issue.Audio</span>
+            }
+            @if (Issue.Videos > 0)
+            {
+                <span><span aria-hidden="true">▶</span> @Issue.Videos</span>
+            }
+            @if (Issue.Reactions > 0)
+            {
+                <span title="@L["JournalReactions"]"><span aria-hidden="true">♥</span> @Issue.Reactions</span>
+            }
+        </span>
+    </span>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public JournalIssue Issue { get; set; } = default!;
+    [Parameter, EditorRequired] public string Language { get; set; } = "ru";
+    [Parameter] public string? CssClass { get; set; }
+
+    public static string FormatDate(DateTimeOffset date, string language) =>
+        date.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo(language == "ru" ? "ru-RU" : "en-GB"));
+
+    public static string Shorten(string text, int length)
+    {
+        if (text.Length <= length) return text;
+        var cut = text.LastIndexOf(' ', length);
+        return text[..(cut > length / 2 ? cut : length)].TrimEnd(',', '.', ';', ':', ' ', '—', '-', '…') + "…";
+    }
+
+    public static string SmallFile(string file) =>
+        file.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) ? file[..^5] + "-480.webp" : file;
+
+    public static string CoverStyle(JournalCover cover) =>
+        $"background-color:{cover.Color};background-image:url('{cover.Lqip}')";
+}

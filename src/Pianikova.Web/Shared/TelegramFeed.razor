@@ -12,7 +12,10 @@
                 <p class="eyebrow">Telegram</p>
                 <h2>@L["TelegramFeedTitle"]</h2>
             </div>
-            <a class="text-link" href="@ChannelUrl" target="_blank" rel="noopener noreferrer">@L["TelegramChannel"] <span aria-hidden="true">↗</span></a>
+            <div class="telegram-feed-links">
+                <a class="text-link" href="journal">@L["JournalFullJournal"] <span aria-hidden="true">→</span></a>
+                <a class="text-link" href="@ChannelUrl" target="_blank" rel="noopener noreferrer">@L["TelegramChannel"] <span aria-hidden="true">↗</span></a>
+            </div>
         </header>
         <div class="telegram-posts">
             @foreach (var post in _posts)

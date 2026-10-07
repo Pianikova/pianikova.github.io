@@ -1,0 +1,23 @@
+@inject IJSRuntime JS
+@inject IStringLocalizer<Ui> L
+
+<header class="site-header journal-header is-scrolled">
+    <a class="wordmark" href="./">
+        <span>@L["ArtistName"]</span>
+        <small>@L["Journal"]</small>
+    </a>
+    <nav class="journal-nav" aria-label="@L["MainNavigation"]">
+        <a href="journal" class="@(IssuePage ? null : "active")">@L["Journal"]</a>
+        <a href="./" class="journal-nav-home">@L["Home"]</a>
+        <button class="language-button" @onclick="SwitchLanguageAsync" aria-label="@L["SwitchLanguage"]">@(Language == "ru" ? "EN" : "RU")</button>
+    </nav>
+</header>
+<div class="scroll-progress" aria-hidden="true"><span class="scroll-progress-value"></span></div>
+
+@code {
+    [Parameter, EditorRequired] public string Language { get; set; } = "ru";
+    [Parameter] public bool IssuePage { get; set; }
+
+    private async Task SwitchLanguageAsync() =>
+        await JS.InvokeVoidAsync("pianikovaLanguage.save", Language == "ru" ? "en" : "ru");
+}

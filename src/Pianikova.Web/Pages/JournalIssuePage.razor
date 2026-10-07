@@ -1,0 +1,202 @@
+@page "/journal/{Id:long}"
+@inject IJournalSource Journal
+@inject IJSRuntime JS
+@inject IStringLocalizer<Ui> L
+
+<PageTitle>@(_issue is null ? L["Journal"].Value : IssueTitle(_issue)) · @L["JournalTitle"]</PageTitle>
+
+<JournalHeader Language="@_language" IssuePage="true" />
+
+@if (_error is not null)
+{
+    <main class="fatal-state">
+        <p class="eyebrow">@L["ContentUnavailable"]</p>
+        <h1>@L["LoadFailed"]</h1>
+        <p>@_error</p>
+        <button class="button button-primary" @onclick="() => LoadAsync(true)">@L["TryAgain"]</button>
+    </main>
+}
+else if (_notFound)
+{
+    <main class="fatal-state">
+        <h1>@L["JournalNotFound"]</h1>
+        <a class="text-link" href="journal">← @L["JournalBack"]</a>
+    </main>
+}
+else if (_issue is null || _html is null || _index is null)
+{
+    <main class="loading-state" aria-live="polite">
+        <span class="loading-line"></span>
+        <p>@L["Loading"]</p>
+    </main>
+}
+else
+{
+    var issue = _issue;
+    var position = IndexOf(issue.Id);
+    var later = position > 0 ? _index.Issues[position - 1] : null;
+    var earlier = position + 1 < _index.Issues.Count ? _index.Issues[position + 1] : null;
+    var series = issue.Series is null ? null : _index.Series.FirstOrDefault(item => item.Id == issue.Series);
+    var rubric = issue.Rubric is null ? null : _index.Rubrics.FirstOrDefault(item => item.Id == issue.Rubric);
+
+    <main class="journal-issue" id="top">
+        <article class="journal-article" lang="ru">
+            <header class="journal-article-header">
+                <a class="journal-back" href="journal"><span aria-hidden="true">←</span> @L["JournalBack"]</a>
+                <p class="journal-meta">
+                    @if (issue.Title is not null)
+                    {
+                        <time datetime="@issue.Date.ToString("O")">@JournalCard.FormatDate(issue.Date, _language)</time>
+                    }
+                    @if (issue.ReadingMinutes > 0)
+                    {
+                        <span>@string.Format(L["JournalMinutes"], issue.ReadingMinutes)</span>
+                    }
+                    @if (rubric is not null)
+                    {
+                        <span class="journal-rubric">@Title(rubric.Title)</span>
+                    }
+                </p>
+                <h1>
+                    @if (issue.Title is not null)
+                    {
+                        @issue.Title
+                    }
+                    else
+                    {
+                        <time datetime="@issue.Date.ToString("O")">@JournalCard.FormatDate(issue.Date, _language)</time>
+                    }
+                </h1>
+                @if (series is not null)
+                {
+                    <p class="journal-series-badge">@L["JournalSeries"] · @Title(series.Title) · @(series.Issues.ToList().IndexOf(issue.Id) + 1)/@series.Issues.Count</p>
+                }
+            </header>
+
+            <div class="journal-body" id="journal-body" @key="issue.Id">@((MarkupString)_html)</div>
+
+            <footer class="journal-article-footer">
+                @if (issue.Tags.Count > 0)
+                {
+                    <p class="journal-tags">@foreach (var tag in issue.Tags) { <span>#@tag</span> }</p>
+                }
+                <div class="journal-article-actions">
+                    <a class="text-link" href="@issue.Source" target="_blank" rel="noopener noreferrer">@L["JournalOpenInTelegram"] <span aria-hidden="true">↗</span></a>
+                    @if (issue.Reactions > 0)
+                    {
+                        <span class="journal-reactions" title="@L["JournalReactions"]"><span aria-hidden="true">♥</span> @issue.Reactions</span>
+                    }
+                </div>
+            </footer>
+        </article>
+
+        @if (series is { Issues.Count: > 1 })
+        {
+            <nav class="journal-series section-pad" aria-label="@L["JournalSeries"]">
+                <p class="eyebrow">@L["JournalSeries"] · @Title(series.Title)</p>
+                <ol>
+                    @foreach (var chapterId in series.Issues)
+                    {
+                        var chapter = _index.Issues.FirstOrDefault(item => item.Id == chapterId);
+                        if (chapter is null) continue;
+                        <li class="@(chapter.Id == issue.Id ? "current" : null)">
+                            <a href="journal/@chapter.Id" aria-current="@(chapter.Id == issue.Id ? "page" : null)">@IssueTitle(chapter)</a>
+                        </li>
+                    }
+                </ol>
+            </nav>
+        }
+
+        <nav class="journal-pager section-pad" aria-label="@L["Journal"]">
+            @if (earlier is not null)
+            {
+                <a class="journal-pager-link journal-pager-earlier" href="journal/@earlier.Id">
+                    <span class="eyebrow"><span aria-hidden="true">←</span> @L["JournalEarlier"]</span>
+                    <span class="journal-pager-title">@IssueTitle(earlier)</span>
+                    <span class="journal-meta"><time>@JournalCard.FormatDate(earlier.Date, _language)</time></span>
+                </a>
+            }
+            else
+            {
+                <span></span>
+            }
+            @if (later is not null)
+            {
+                <a class="journal-pager-link journal-pager-later" href="journal/@later.Id">
+                    <span class="eyebrow">@L["JournalLater"] <span aria-hidden="true">→</span></span>
+                    <span class="journal-pager-title">@IssueTitle(later)</span>
+                    <span class="journal-meta"><time>@JournalCard.FormatDate(later.Date, _language)</time></span>
+                </a>
+            }
+        </nav>
+    </main>
+
+    <JournalFooter Language="@_language" />
+}
+
+@code {
+    [Parameter] public long Id { get; set; }
+
+    private JournalIndex? _index;
+    private JournalIssue? _issue;
+    private string? _html;
+    private string? _error;
+    private bool _notFound;
+    private string _language = "ru";
+    private long _loadedId;
+    private long _enhancedId;
+
+    protected override void OnInitialized() =>
+        _language = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru" ? "ru" : "en";
+
+    protected override Task OnParametersSetAsync() => LoadAsync(false);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_html is null || _issue is null || _enhancedId == _issue.Id) return;
+        _enhancedId = _issue.Id;
+        await JS.InvokeVoidAsync("pianikovaJournal.issue", "#journal-body", new
+        {
+            listen = L["JournalListenInTelegram"].Value,
+            watch = L["JournalWatchInTelegram"].Value,
+            spoiler = L["JournalShowSpoiler"].Value,
+            close = L["Close"].Value
+        });
+    }
+
+    private async Task LoadAsync(bool retry)
+    {
+        if (!retry && _loadedId == Id) return;
+        _loadedId = Id;
+        _error = null;
+        _notFound = false;
+        _html = null;
+        _issue = null;
+        try
+        {
+            await JS.InvokeVoidAsync("pianikovaLanguage.apply", _language);
+            _index = await Journal.LoadIndexAsync();
+            _issue = _index.Issues.FirstOrDefault(issue => issue.Id == Id);
+            if (_issue is null)
+            {
+                _notFound = true;
+                return;
+            }
+            _html = await Journal.LoadIssueHtmlAsync(_issue);
+        }
+        catch (Exception exception) { _error = exception.Message; }
+    }
+
+    private int IndexOf(long id)
+    {
+        for (var index = 0; index < _index!.Issues.Count; index++)
+            if (_index.Issues[index].Id == id) return index;
+        return -1;
+    }
+
+    private string IssueTitle(JournalIssue issue) =>
+        issue.Title ?? (string.IsNullOrWhiteSpace(issue.Excerpt) ? JournalCard.FormatDate(issue.Date, _language) : JournalCard.Shorten(issue.Excerpt, 70));
+
+    private string Title(IReadOnlyDictionary<string, string> title) =>
+        title.GetValueOrDefault(_language) ?? title.GetValueOrDefault("ru") ?? title.Values.FirstOrDefault() ?? string.Empty;
+}

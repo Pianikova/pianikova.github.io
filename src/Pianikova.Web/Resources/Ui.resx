@@ -63,4 +63,36 @@
   <data name="SoldOut" xml:space="preserve"><value>Sold out</value></data>
   <data name="FreeAdmission" xml:space="preserve"><value>Free admission</value></data>
   <data name="DetailsComingSoon" xml:space="preserve"><value>Details coming soon</value></data>
+  <data name="ArtistName" xml:space="preserve"><value>Julia Pianikova</value></data>
+  <data name="Home" xml:space="preserve"><value>Home</value></data>
+  <data name="Journal" xml:space="preserve"><value>Journal</value></data>
+  <data name="JournalEyebrow" xml:space="preserve"><value>Telegram channel · Katavasis</value></data>
+  <data name="JournalLead" xml:space="preserve"><value>Notes on music, the stage and travel — the channel's archive, issue by issue.</value></data>
+  <data name="JournalStats" xml:space="preserve"><value>{0} issues · since {1}</value></data>
+  <data name="JournalAll" xml:space="preserve"><value>All</value></data>
+  <data name="JournalSearch" xml:space="preserve"><value>Search the journal</value></data>
+  <data name="JournalRandom" xml:space="preserve"><value>Open at random</value></data>
+  <data name="JournalFavorites" xml:space="preserve"><value>Readers' favourites</value></data>
+  <data name="JournalOnThisDay" xml:space="preserve"><value>On this day</value></data>
+  <data name="JournalLatest" xml:space="preserve"><value>Latest issue</value></data>
+  <data name="JournalRead" xml:space="preserve"><value>Read</value></data>
+  <data name="JournalMore" xml:space="preserve"><value>Show more</value></data>
+  <data name="JournalNothingFound" xml:space="preserve"><value>Nothing found. Try another word or reset the filters.</value></data>
+  <data name="JournalReset" xml:space="preserve"><value>Reset filters</value></data>
+  <data name="JournalMinutes" xml:space="preserve"><value>{0} min read</value></data>
+  <data name="JournalEarlier" xml:space="preserve"><value>Earlier</value></data>
+  <data name="JournalLater" xml:space="preserve"><value>Later</value></data>
+  <data name="JournalOpenInTelegram" xml:space="preserve"><value>Open in Telegram</value></data>
+  <data name="JournalListenInTelegram" xml:space="preserve"><value>Listen in Telegram</value></data>
+  <data name="JournalWatchInTelegram" xml:space="preserve"><value>Watch in Telegram</value></data>
+  <data name="JournalBack" xml:space="preserve"><value>All issues</value></data>
+  <data name="JournalRussianOnly" xml:space="preserve"><value>The journal is written in Russian.</value></data>
+  <data name="JournalNotFound" xml:space="preserve"><value>This issue could not be found.</value></data>
+  <data name="JournalSeries" xml:space="preserve"><value>Series</value></data>
+  <data name="JournalFullJournal" xml:space="preserve"><value>Full journal</value></data>
+  <data name="JournalPhotos" xml:space="preserve"><value>Photos</value></data>
+  <data name="JournalAudio" xml:space="preserve"><value>Audio</value></data>
+  <data name="JournalReactions" xml:space="preserve"><value>Reactions</value></data>
+  <data name="JournalShowSpoiler" xml:space="preserve"><value>Tap to reveal</value></data>
+  <data name="JournalTitle" xml:space="preserve"><value>Katavasis</value></data>
 </root>

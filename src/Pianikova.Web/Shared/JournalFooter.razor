@@ -1,0 +1,14 @@
+@inject IStringLocalizer<Ui> L
+
+<footer class="site-footer section-pad">
+    <div><strong>@L["ArtistName"]</strong><span>@L["JournalTitle"] · @L["Journal"]</span></div>
+    <div class="footer-links">
+        <a href="./">@L["Home"]</a>
+        <a href="https://t.me/gattavasis" target="_blank" rel="noopener">Telegram</a>
+    </div>
+    <small>© @DateTime.Now.Year @L["ArtistName"] · @L["Rights"]</small>
+</footer>
+
+@code {
+    [Parameter, EditorRequired] public string Language { get; set; } = "ru";
+}
