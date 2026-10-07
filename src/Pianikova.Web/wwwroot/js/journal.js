@@ -227,7 +227,7 @@ window.pianikovaJournal = (() => {
 
         issue: (selector, labels) => {
             bindProgress();
-            window.scrollTo({ top: 0, behavior: "instant" });
+            if (!window.pianikovaScrollRestoration?.isRestoring()) window.scrollTo({ top: 0, behavior: "instant" });
             const body = document.querySelector(selector);
             if (!body || body.dataset.enhanced === "true") return;
             body.dataset.enhanced = "true";
