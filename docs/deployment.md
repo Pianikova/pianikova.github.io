@@ -12,11 +12,11 @@ dotnet run --project build -- web
 artifacts/web/wwwroot
 ```
 
-Production-сборка не включает локальную копию `content`: опубликованное приложение читает редакционные данные из GitHub.
+Production-сборка включает каталог `content`: опубликованное приложение читает редакционные данные и файлы журнала с того же адреса, что и сайт.
 
 ## GitHub Pages
 
-Workflow `.github/workflows/pages.yml` называется **Publish** и запускается вручную через `workflow_dispatch` на вкладке GitHub Actions.
+Workflow `.github/workflows/pages.yml` называется **Publish**. Он запускается вручную через `workflow_dispatch` на вкладке GitHub Actions и автоматически при изменениях в `content` ветки `main`.
 
 Он выполняет:
 

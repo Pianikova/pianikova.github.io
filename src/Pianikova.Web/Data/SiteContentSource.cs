@@ -1,14 +1,11 @@
 namespace Pianikova.Web.Data;
 
-internal sealed class SiteContentSource(HttpClient httpClient, NavigationManager navigationManager) : ISiteContentSource
+internal sealed class SiteContentSource(HttpClient httpClient) : ISiteContentSource
 {
-    private static readonly string GitHubRoot = $"https://raw.githubusercontent.com/{GitHubRepository.FullName}/{GitHubRepository.Branch}/content/";
+    private const string ContentRoot = "content/";
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
-    private bool IsLocal => navigationManager.ToAbsoluteUri(navigationManager.Uri).IsLoopback;
-    private string ContentRoot => IsLocal ? "content/" : GitHubRoot;
-
-    public string SourceDescription => IsLocal ? "local content" : "GitHub main";
+    public string SourceDescription => "site content";
 
     public async Task<SiteSettings> LoadSettingsAsync(CancellationToken cancellationToken = default)
     {

@@ -14,12 +14,11 @@
   <ItemGroup>
     <Content Remove="wwwroot\content\**\*" />
   </ItemGroup>
-  <ItemGroup Condition="'$(PianikovaProduction)' != 'true'">
+  <ItemGroup>
     <LocalContent Include="..\..\content\**\*" />
   </ItemGroup>
   <Target Name="SyncLocalContent"
-          BeforeTargets="ResolveProjectStaticWebAssets"
-          Condition="'$(PianikovaProduction)' != 'true'">
+          BeforeTargets="ResolveProjectStaticWebAssets">
     <RemoveDir Directories="wwwroot\content" />
     <ItemGroup>
       <LocalContentDestination Include="@(LocalContent->'wwwroot\content\%(RecursiveDir)%(Filename)%(Extension)')" />
