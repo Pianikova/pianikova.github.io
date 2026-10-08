@@ -57,10 +57,10 @@ else
                         <span class="journal-rubric">@Title(rubric.Title)</span>
                     }
                 </p>
-                <h1>
+                <h1 class="@(issue.Title is { Length: > 48 } ? "is-long" : null)">
                     @if (issue.Title is not null)
                     {
-                        @issue.Title
+                        @JournalText.Clean(issue.Title)
                     }
                     else
                     {

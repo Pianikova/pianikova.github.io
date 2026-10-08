@@ -1,6 +1,9 @@
 @inject IJournalSource Journal
 @inject IStringLocalizer<Ui> L
 
+@{
+    var (headline, rest) = JournalText.Split(Issue.Title, Issue.Excerpt);
+}
 <a class="journal-featured" href="journal/@Issue.Id">
     @if (Issue.Cover is { } cover)
     {
@@ -10,14 +13,21 @@
     }
     else
     {
-        <JournalTypeCover Text="@JournalCard.Shorten(Issue.Title ?? Issue.Excerpt, 150)" Kicker="@JournalCard.Kind(Issue, L)" Seed="Issue.Id" Staff="Issue.Audio > 0" Decorative="true" CssClass="journal-featured-cover" />
+        <JournalTypeCover Text="" Initial="@(headline ?? rest)" Kicker="@JournalCard.Kind(Issue, L)" Seed="Issue.Id" Staff="Issue.Audio > 0" Decorative="true" CssClass="journal-featured-cover" />
     }
     <span class="journal-featured-copy">
         <span class="eyebrow">@Eyebrow</span>
-        <span class="journal-featured-title">@(Issue.Title ?? JournalCard.Shorten(Issue.Excerpt, 90))</span>
-        @if (Issue.Cover is not null || Issue.Title is not null)
+        @if (headline is not null)
         {
-            <span class="journal-featured-excerpt">@JournalCard.Shorten(Issue.Excerpt, 260)</span>
+            <span class="journal-featured-title @(headline.Length > 48 ? "is-long" : null)">@headline</span>
+            @if (!string.IsNullOrWhiteSpace(rest))
+            {
+                <span class="journal-featured-excerpt">@JournalCard.Shorten(rest, 240)</span>
+            }
+        }
+        else
+        {
+            <span class="journal-featured-lede">@JournalCard.Shorten(rest, 230)</span>
         }
         <span class="journal-meta">
             <time datetime="@Issue.Date.ToString("O")">@JournalCard.FormatDate(Issue.Date, Language)</time>

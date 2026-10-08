@@ -137,3 +137,42 @@ internal sealed class JournalSource(HttpClient httpClient, ISiteContentSource co
         return document.ToHtml(Pipeline);
     }
 }
+
+/// <summary>Display helpers: a short headline for large type, the remaining text for the lede.</summary>
+public static partial class JournalText
+{
+    private const int MaxHeadline = 70;
+
+    /// <summary>
+    /// Uses the title when there is one; otherwise the first sentence if it is short enough to be a headline.
+    /// Long openings return no headline, so the text is shown as a lede instead of oversized type.
+    /// </summary>
+    public static (string? Headline, string Body) Split(string? title, string text)
+    {
+        text = text.Trim();
+        if (!string.IsNullOrWhiteSpace(title)) return (Clean(title), text);
+        var sentence = FirstSentence().Match(text);
+        if (!sentence.Success || sentence.Groups["sentence"].Length > MaxHeadline) return (null, text);
+        var headline = Clean(sentence.Groups["sentence"].Value.TrimEnd('.', ' ', '·'));
+        return headline.Length < 4 ? (null, text) : (headline, text[sentence.Length..].Trim());
+    }
+
+    /// <summary>Removes emoji and pictographs, which look clumsy at headline sizes.</summary>
+    public static string Clean(string text)
+    {
+        var builder = new StringBuilder(text.Length);
+        foreach (var rune in text.EnumerateRunes())
+        {
+            if (Rune.GetUnicodeCategory(rune) == UnicodeCategory.OtherSymbol || rune.Value is 0xFE0F or 0x200D || rune.Value is >= 0x1F3FB and <= 0x1F3FF)
+                continue;
+            builder.Append(rune.ToString());
+        }
+        return Spaces().Replace(builder.ToString(), " ").Trim();
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^(?<sentence>.{4,}?[.!?])(?=\s|$)|^(?<sentence>[^·]{4,}?)\s·\s", System.Text.RegularExpressions.RegexOptions.Singleline)]
+    private static partial System.Text.RegularExpressions.Regex FirstSentence();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\s+")]
+    private static partial System.Text.RegularExpressions.Regex Spaces();
+}

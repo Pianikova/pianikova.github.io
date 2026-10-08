@@ -1,6 +1,9 @@
 @inject IJournalSource Journal
 @inject IStringLocalizer<Ui> L
 
+@{
+    var (headline, rest) = JournalText.Split(Issue.Title, Issue.Excerpt);
+}
 <a class="journal-card @(Issue.Cover is null ? "journal-card-text" : null) @CssClass" href="journal/@Issue.Id">
     @if (Issue.Cover is { } cover)
     {
@@ -11,7 +14,7 @@
     }
     else
     {
-        <JournalTypeCover Text="@Shorten(Issue.Title ?? Issue.Excerpt, Issue.Title is null ? 130 : 90)" Kicker="@Kind(Issue, L)" Seed="Issue.Id" Staff="Issue.Audio > 0" CssClass="journal-card-type" />
+        <JournalTypeCover Text="@(headline ?? Shorten(rest, 120))" Kicker="@Kind(Issue, L)" Seed="Issue.Id" Staff="Issue.Audio > 0" CssClass="journal-card-type" />
     }
     <span class="journal-card-body">
         <span class="journal-meta">
@@ -23,18 +26,18 @@
         </span>
         @if (Issue.Cover is null)
         {
-            @if (Issue.Title is not null && !string.IsNullOrWhiteSpace(Issue.Excerpt))
+            @if (headline is not null && !string.IsNullOrWhiteSpace(rest))
             {
-                <span class="journal-card-excerpt">@Shorten(Issue.Excerpt, 120)</span>
+                <span class="journal-card-excerpt">@Shorten(rest, 120)</span>
             }
         }
-        else if (!string.IsNullOrWhiteSpace(Issue.Title))
+        else if (headline is not null)
         {
-            <span class="journal-card-title">@Issue.Title</span>
+            <span class="journal-card-title">@headline</span>
         }
         else
         {
-            <span class="journal-card-excerpt">@Shorten(Issue.Excerpt, 120)</span>
+            <span class="journal-card-excerpt">@Shorten(rest, 130)</span>
         }
         <span class="journal-card-counts">
             @if (Issue.Photos > 0)

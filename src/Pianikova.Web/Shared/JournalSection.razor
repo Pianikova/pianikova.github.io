@@ -8,6 +8,7 @@
 @if (_items.Count > 0)
 {
     var lead = _items[0];
+    var (leadHeadline, leadRest) = lead.Post is null ? (null, string.Empty) : JournalText.Split(null, Normalize(lead.Post.Text));
     <section id="journal" class="journal-home section-pad numbered-section" aria-labelledby="journal-home-title">
         <header class="section-heading">
             <div>
@@ -27,10 +28,21 @@
         else
         {
             <a class="journal-featured" href="@lead.Post!.Url" target="_blank" rel="noopener noreferrer">
-                <JournalTypeCover Text="@JournalCard.Shorten(Normalize(lead.Post.Text), 150)" Kicker="Telegram" Seed="lead.Post.Id" Decorative="true" CssClass="journal-featured-cover" />
+                <JournalTypeCover Text="" Initial="@(leadHeadline ?? leadRest)" Kicker="Telegram" Seed="lead.Post.Id" Decorative="true" CssClass="journal-featured-cover" />
                 <span class="journal-featured-copy">
                     <span class="eyebrow">Telegram · @L["JournalLatest"]</span>
-                    <span class="journal-featured-title">@JournalCard.Shorten(Normalize(lead.Post.Text), 90)</span>
+                    @if (leadHeadline is not null)
+                    {
+                        <span class="journal-featured-title @(leadHeadline.Length > 48 ? "is-long" : null)">@leadHeadline</span>
+                        @if (!string.IsNullOrWhiteSpace(leadRest))
+                        {
+                            <span class="journal-featured-excerpt">@JournalCard.Shorten(leadRest, 240)</span>
+                        }
+                    }
+                    else
+                    {
+                        <span class="journal-featured-lede">@JournalCard.Shorten(leadRest, 230)</span>
+                    }
                     <span class="journal-meta"><time datetime="@lead.Date.ToString("O")">@JournalCard.FormatDate(lead.Date, Language)</time></span>
                     <span class="text-link">@L["TelegramReadPost"] <span aria-hidden="true">↗</span></span>
                 </span>
