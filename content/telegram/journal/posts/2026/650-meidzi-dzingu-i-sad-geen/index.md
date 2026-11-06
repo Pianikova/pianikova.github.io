@@ -5,7 +5,7 @@ date: "2026-09-30T13:18:40+03:00"
 title: "Мэйдзи Дзингу и сад Гёэн"
 source: "https://t.me/gattavasis/650"
 tags: []
-reactions: 76
+reactions: 79
 rubric: ""
 series: ""
 hidden: false

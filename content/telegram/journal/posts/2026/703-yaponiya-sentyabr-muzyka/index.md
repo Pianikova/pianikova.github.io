@@ -5,7 +5,7 @@ date: "2026-10-02T20:43:17+03:00"
 title: "Япония! Сентябрь! Музыка!🇯🇵 🍁🎻"
 source: "https://t.me/gattavasis/703"
 tags: []
-reactions: 5
+reactions: 6
 rubric: ""
 series: ""
 hidden: false

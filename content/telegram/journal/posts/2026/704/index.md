@@ -5,7 +5,7 @@ date: "2026-10-02T20:53:28+03:00"
 title: "«ヴァイオリンの繊細な音色が会場に響きわたり、素晴らしかったです»"
 source: "https://t.me/gattavasis/704"
 tags: []
-reactions: 19
+reactions: 21
 rubric: ""
 series: ""
 hidden: false
