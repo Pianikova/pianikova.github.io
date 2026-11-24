@@ -1,4 +1,4 @@
-import { postExcerpt, siteLinks } from "./filter.js";
+import { postExcerpt } from "./filter.js";
 
 const UPSERT_POST = `
   INSERT INTO posts (chat_id, message_id, posted_at, event_at, update_id, matches, excerpt, telegram_url)
@@ -27,7 +27,7 @@ async function feed(env) {
 
   const { results } = await env.DB.prepare(`
     SELECT message_id, posted_at, excerpt, telegram_url
-    FROM posts WHERE matches = 1
+    FROM posts
     ORDER BY posted_at DESC, message_id DESC LIMIT 5
   `).all();
 
@@ -69,13 +69,12 @@ async function webhook(request, env) {
     return new Response("Invalid post", { status: 400 });
   }
 
-  const links = siteLinks(post);
   const eventAt = Number.isInteger(post.edit_date) ? post.edit_date : post.date;
-  const excerpt = postExcerpt(post) || links[0] || "";
+  const excerpt = postExcerpt(post) || "Telegram";
   const telegramUrl = `https://t.me/${env.CHANNEL_USERNAME}/${post.message_id}`;
   await env.DB.prepare(UPSERT_POST).bind(
     String(post.chat.id), post.message_id, post.date, eventAt, update.update_id,
-    links.length > 0 ? 1 : 0, excerpt, telegramUrl,
+    1, excerpt, telegramUrl,
   ).run();
 
   return new Response("OK");

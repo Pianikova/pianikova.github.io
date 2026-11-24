@@ -110,12 +110,7 @@ internal sealed class ContentValidationTarget(BuildPaths paths, JournalStore jou
                 !Uri.TryCreate(rawUrl, UriKind.Absolute, out var url) || url.Scheme != Uri.UriSchemeHttps ||
                 !url.Host.Equals("t.me", StringComparison.OrdinalIgnoreCase) || url.AbsolutePath != $"/gattavasis/{id}")
                 Error(location, $"Post {id}: url must point to its post in @gattavasis.");
-            if (post["siteUrl"] is not JsonValue siteValue || !siteValue.TryGetValue<string>(out var rawSite) ||
-                !Uri.TryCreate(rawSite, UriKind.Absolute, out var siteUrl) ||
-                siteUrl.Scheme is not ("http" or "https") || siteUrl.UserInfo.Length > 0 || !siteUrl.IsDefaultPort ||
-                !(siteUrl.Host.Equals("pianikova.com", StringComparison.OrdinalIgnoreCase) ||
-                  siteUrl.Host.Equals("www.pianikova.com", StringComparison.OrdinalIgnoreCase)))
-                Error(location, $"Post {id}: siteUrl must point to pianikova.com.");
+
         }
     }
 

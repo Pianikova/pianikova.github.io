@@ -13,5 +13,6 @@ internal partial class Composition
             .Root<BuildApplication>(nameof(Root))
             .Arg<string[]>("args")
             .Arg<CancellationToken>("cancellationToken")
-            .Singleton<BuildPaths, ProcessRunner, BuildSolutionTarget, WebTarget, LocalWebTarget, ContentValidationTarget, TelegramHistoryTarget, JournalStore, TelegramJournalTarget>();
+            .Singleton<BuildPaths, ProcessRunner, BuildSolutionTarget, WebTarget, LocalWebTarget, ContentValidationTarget,
+                TelegramHistoryTarget, JournalStore, TelegramJournalTarget, TelegramJournalSyncTarget>();
 }

@@ -10,6 +10,7 @@ internal sealed class BuildApplication(
     ContentValidationTarget contentValidation,
     TelegramHistoryTarget telegramHistory,
     TelegramJournalTarget telegramJournal,
+    TelegramJournalSyncTarget telegramJournalSync,
     CancellationToken cancellationToken)
 {
     public async Task<int> RunAsync()
@@ -30,11 +31,14 @@ internal sealed class BuildApplication(
             var import = await telegramHistory.RunExportAsync(cancellationToken);
             return import == 0 ? contentValidation.Run() : import;
         }
-        if (target is "telegram-journal")
+        if (target is "telegram-journal" or "telegram-journal-sync")
         {
             var before = contentValidation.Run(validateJournalIndexes: false);
             if (before != 0) return before;
-            var export = await telegramJournal.RunAsync(args.Skip(1).ToArray(), cancellationToken);
+            var options = args.Skip(1).ToArray();
+            var export = target == "telegram-journal-sync"
+                ? await telegramJournalSync.RunAsync(options, cancellationToken)
+                : await telegramJournal.RunAsync(options, cancellationToken);
             return export == 0 ? contentValidation.Run() : export;
         }
         if (target is not ("build" or "web" or "local-web")) return await HelpAsync();
@@ -62,6 +66,8 @@ internal sealed class BuildApplication(
         Console.WriteLine("  telegram-history-export  Import a Telegram Desktop channel JSON export without API credentials");
         Console.WriteLine("  telegram-journal [result.json] [--reindex] [--rebuild all|ID,ID]");
         Console.WriteLine("                         Build the journal in content/telegram/journal from a Telegram Desktop export");
+        Console.WriteLine("  telegram-journal-sync [--no-prompt]");
+        Console.WriteLine("                         Update the journal directly from the Telegram channel");
         return Task.FromResult(0);
     }
 }

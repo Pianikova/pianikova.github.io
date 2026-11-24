@@ -4,6 +4,7 @@ import worker from "./worker.js";
 
 function environment() {
   const writes = [];
+  const reads = [];
   return {
     CHANNEL_USERNAME: "gattavasis",
     TELEGRAM_CHANNEL_ID: "-1001234567890",
@@ -13,11 +14,12 @@ function environment() {
         return {
           bind(...values) { writes.push({ sql, values }); return this; },
           async run() { return { success: true }; },
-          async all() { return { results: [] }; },
+          async all() { reads.push(sql); return { results: [] }; },
         };
       },
     },
     writes,
+    reads,
   };
 }
 
@@ -39,7 +41,7 @@ test("webhook ignores unauthorized and unrelated channel updates", async () => {
   assert.equal(env.writes.length, 0);
 });
 
-test("webhook stores matches and tombstones edits without a site link", async () => {
+test("webhook keeps posts and edits without a site link", async () => {
   const env = environment();
   const post = { message_id: 10, date: 100, chat: { id: -1001234567890 }, text: "https://pianikova.com/concert" };
   assert.equal((await worker.fetch(postRequest({ update_id: 1, channel_post: post }), env)).status, 200);
@@ -50,7 +52,7 @@ test("webhook stores matches and tombstones edits without a site link", async ()
     update_id: 2,
     edited_channel_post: { ...post, edit_date: 200, text: "Ссылка убрана" },
   }), env)).status, 200);
-  assert.deepEqual(env.writes[1].values.slice(3, 6), [200, 2, 0]);
+  assert.deepEqual(env.writes[1].values.slice(3, 6), [200, 2, 1]);
 });
 
 test("public feed contains no bot secrets", async () => {
@@ -58,4 +60,31 @@ test("public feed contains no bot secrets", async () => {
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
   assert.deepEqual(await response.json(), { posts: [] });
+});
+
+
+test("webhook accepts new text, captions and media without site links", async () => {
+  for (const content of [{ text: "Новости канала" }, { caption: "Афиша" }, { photo: [{ file_id: "photo" }] }]) {
+    const env = environment();
+    const response = await worker.fetch(postRequest({ update_id: 1, channel_post: {
+      message_id: 11, date: 100, chat: { id: -1001234567890 }, ...content,
+    } }), env);
+    assert.equal(response.status, 200);
+    assert.equal(env.writes[0].values[5], 1);
+    assert.equal(env.writes[0].values[6], content.text || content.caption || "Telegram");
+  }
+});
+
+test("feed includes previously stored posts without site links", async () => {
+  const env = environment();
+  await worker.fetch(new Request("https://feed.example/feed"), env);
+  assert.doesNotMatch(env.reads[0], /matches\s*=/u);
+});
+
+test("database failures leave webhook delivery retryable", async () => {
+  const env = environment();
+  env.DB.prepare = () => ({ bind() { return this; }, async run() { throw new Error("DB unavailable"); } });
+  await assert.rejects(worker.fetch(postRequest({ update_id: 1, channel_post: {
+    message_id: 11, date: 100, chat: { id: -1001234567890 }, text: "Новости",
+  } }), env), /DB unavailable/u);
 });

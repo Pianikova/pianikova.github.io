@@ -10,7 +10,7 @@ namespace Build.Targets;
 /// </summary>
 internal sealed class TelegramJournalTarget(BuildPaths paths, JournalStore store)
 {
-    private static readonly TimeSpan IssueGap = TimeSpan.FromMinutes(2);
+    internal static readonly TimeSpan IssueGap = TimeSpan.FromMinutes(2);
 
     public Task<int> RunAsync(IReadOnlyList<string> args, CancellationToken cancellationToken)
     {
@@ -19,11 +19,15 @@ internal sealed class TelegramJournalTarget(BuildPaths paths, JournalStore store
             var reindexOnly = args.Contains("--reindex", StringComparer.OrdinalIgnoreCase);
             var rebuild = ParseRebuild(args);
             var settings = store.ReadSettings();
-            if (!reindexOnly) Import(ResolveExport(args), settings, rebuild, cancellationToken);
+            if (!reindexOnly)
+            {
+                var path = Path.GetFullPath(ResolveExport(args));
+                var messages = JournalExport.Read(path);
+                Console.WriteLine($"Экспорт: {path}");
+                Import(messages, Path.GetDirectoryName(path)!, settings, store.ReadPosts(), rebuild, cancellationToken);
+            }
 
-            var changed = store.WriteIndexes(settings, store.ReadPosts());
-            Console.WriteLine(changed ? "Индексы журнала обновлены." : "Индексы журнала не изменились.");
-            Console.WriteLine($"Журнал: {store.Root}");
+            UpdateIndexes(settings);
             return Task.FromResult(0);
         }
         catch (OperationCanceledException)
@@ -38,15 +42,26 @@ internal sealed class TelegramJournalTarget(BuildPaths paths, JournalStore store
         }
     }
 
-    private void Import(string exportPath, JournalSettings settings, RebuildRequest rebuild, CancellationToken cancellationToken)
+    public void ImportFromChannel(IReadOnlyList<ExportMessage> messages, string mediaDirectory, JournalSettings settings,
+        IReadOnlyList<JournalPost> posts, CancellationToken cancellationToken)
     {
-        var exportDirectory = Path.GetDirectoryName(Path.GetFullPath(exportPath))!;
-        var messages = JournalExport.Read(exportPath);
+        Import(messages, mediaDirectory, settings, posts, new RebuildRequest(false, []), cancellationToken);
+        UpdateIndexes(settings);
+    }
+
+    private void UpdateIndexes(JournalSettings settings)
+    {
+        var changed = store.WriteIndexes(settings, store.ReadPosts());
+        Console.WriteLine(changed ? "Индексы журнала обновлены." : "Индексы журнала не изменились.");
+        Console.WriteLine($"Журнал: {store.Root}");
+    }
+
+    private void Import(IReadOnlyList<ExportMessage> messages, string exportDirectory, JournalSettings settings,
+        IReadOnlyList<JournalPost> posts, RebuildRequest rebuild, CancellationToken cancellationToken)
+    {
         var byId = messages.ToDictionary(message => message.Id);
-        var posts = store.ReadPosts();
         var known = posts.SelectMany(post => post.Meta.Messages.Append(post.Meta.Id)).ToHashSet();
-        Console.WriteLine($"Экспорт: {exportPath}");
-        Console.WriteLine($"Сообщений в экспорте: {messages.Count}; выпусков в журнале: {posts.Count}.");
+        Console.WriteLine($"Сообщений получено: {messages.Count}; выпусков в журнале: {posts.Count}.");
 
         var refreshed = 0;
         var rebuilt = 0;

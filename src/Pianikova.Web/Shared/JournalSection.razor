@@ -162,11 +162,10 @@
             else combined[post.Id] = post;
         }
 
-        // Posts already exported to the journal appear there as issues; only newer ones are shown as live posts.
-        var latestIssue = _issues.Count > 0 ? _issues.Max(issue => issue.Date) : DateTimeOffset.MinValue;
+        // Prefer journal issues for exported IDs; keep all other posts regardless of their date.
         var issueIds = _issues.Select(issue => issue.Id).ToHashSet();
         var fresh = combined.Values
-            .Where(post => post.Date > latestIssue && !issueIds.Contains(post.Id))
+            .Where(post => !issueIds.Contains(post.Id))
             .Select(post => new HomeItem(post.Date, null, post));
         _items = fresh
             .Concat(_issues.Take(ItemCount).Select(issue => new HomeItem(issue.Date, issue, null)))
@@ -181,12 +180,7 @@
         Uri.TryCreate(post.Url, UriKind.Absolute, out var telegramUrl) &&
         telegramUrl.Scheme == Uri.UriSchemeHttps &&
         telegramUrl.Host.Equals("t.me", StringComparison.OrdinalIgnoreCase) &&
-        telegramUrl.AbsolutePath == $"/gattavasis/{post.Id}" &&
-        Uri.TryCreate(post.SiteUrl, UriKind.Absolute, out var siteUrl) &&
-        siteUrl.Scheme is "https" or "http" &&
-        siteUrl.UserInfo.Length == 0 && siteUrl.IsDefaultPort &&
-        (siteUrl.Host.Equals("pianikova.com", StringComparison.OrdinalIgnoreCase) ||
-         siteUrl.Host.Equals("www.pianikova.com", StringComparison.OrdinalIgnoreCase));
+        telegramUrl.AbsolutePath == $"/gattavasis/{post.Id}";
 
     private static string Normalize(string text) => string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 

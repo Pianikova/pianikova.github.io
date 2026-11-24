@@ -6,6 +6,10 @@ on:
     branches: [main]
     paths:
       - 'content/**'
+      - 'src/**'
+      - 'build/**'
+      - 'Directory.Build.*'
+      - '.github/workflows/pages.yml'
 
 permissions:
   contents: read

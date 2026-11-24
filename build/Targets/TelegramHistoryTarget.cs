@@ -11,9 +11,9 @@ namespace Build.Targets;
 
 internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
 {
-    private const string ChannelUsername = "gattavasis";
-    private const long ChannelId = 2266924011;
-    private static readonly TimeZoneInfo MoscowTime = GetMoscowTimeZone();
+    private const string ChannelUsername = JournalExport.ChannelUsername;
+    private const long ChannelId = JournalExport.ChannelId;
+    private static readonly TimeZoneInfo MoscowTime = JournalExport.MoscowTime;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public async Task<int> RunAsync(CancellationToken cancellationToken)
@@ -24,8 +24,7 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
             return 1;
         }
 
-        string? apiHash = null;
-        string? phone = null;
+        using var session = new TelegramChannelSession(allowPrompts: true, useEnvironment: false);
         try
         {
             PrintInstructions();
@@ -33,42 +32,7 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
             var lastDay = ReadDate("Through (YYYY-MM-DD, Moscow time): ");
             if (lastDay < firstDay) throw new InvalidOperationException("The end date must be on or after the start date.");
 
-            Console.Write("Telegram api_id: ");
-            var apiId = Console.ReadLine()?.Trim();
-            if (!int.TryParse(apiId, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedApiId) || parsedApiId <= 0)
-                throw new InvalidOperationException("api_id must be a positive number.");
-            apiHash = ReadSecret("Telegram api_hash: ");
-            if (string.IsNullOrWhiteSpace(apiHash)) throw new InvalidOperationException("api_hash is required.");
-            Console.Write("Telegram phone number (international format): ");
-            phone = Console.ReadLine()?.Trim();
-            if (string.IsNullOrWhiteSpace(phone)) throw new InvalidOperationException("Phone number is required.");
-
-            var sessionDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Pianikova");
-            Directory.CreateDirectory(sessionDirectory);
-            var sessionPath = Path.Combine(sessionDirectory, "telegram-history.session");
-
-            string? Config(string name) => name switch
-            {
-                "api_id" => parsedApiId.ToString(CultureInfo.InvariantCulture),
-                "api_hash" => apiHash,
-                "phone_number" => phone,
-                "verification_code" => ReadSecret("Telegram login code: "),
-                "email" => ReadText("Telegram email (if requested): "),
-                "email_verification_code" => ReadSecret("Telegram email code: "),
-                "password" => ReadSecret("Telegram two-step password: "),
-                "session_pathname" => sessionPath,
-                "first_name" or "last_name" => throw new InvalidOperationException("This target only supports existing Telegram accounts."),
-                _ => null
-            };
-
-            WTelegram.Helpers.Log = (_, _) => { };
-            using var client = new WTelegram.Client(Config);
-            await client.LoginUserIfNeeded();
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var resolved = await client.Contacts_ResolveUsername(ChannelUsername);
-            if (resolved.Chat is not Channel channel || channel.id != ChannelId)
-                throw new InvalidOperationException("Telegram resolved a different channel. Import stopped.");
+            var channel = await session.ConnectAsync(cancellationToken);
 
             var existing = ReadExistingPosts();
             var ids = existing["posts"]!.AsArray()
@@ -82,30 +46,27 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var history = await client.Messages_GetHistory(channel, offset_id: offsetId, limit: 100);
+                var history = await session.Client.Messages_GetHistory(channel, offset_id: offsetId, limit: 100);
                 if (history.Messages.Length == 0) break;
 
                 foreach (var message in history.Messages.OfType<Message>())
                 {
                     scanned++;
-                    var date = AsUtc(message.date);
+                    var date = TelegramChannelSession.AsUtc(message.date);
                     var localDay = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(date, MoscowTime));
                     if (localDay < firstDay || localDay > lastDay) continue;
 
-                    var siteUrl = FindSiteUrl(message);
-                    if (siteUrl is null) continue;
                     matched++;
                     if (!ids.Add(message.ID)) continue;
 
                     var text = Whitespace().Replace(message.message ?? string.Empty, " ").Trim();
-                    if (text.Length == 0) text = siteUrl;
+                    if (text.Length == 0) text = "Telegram";
                     existing["posts"]!.AsArray().Add(new JsonObject
                     {
                         ["id"] = message.ID,
                         ["date"] = new DateTimeOffset(date).ToString("O", CultureInfo.InvariantCulture),
                         ["text"] = text,
-                        ["url"] = $"https://t.me/{ChannelUsername}/{message.ID}",
-                        ["siteUrl"] = siteUrl
+                        ["url"] = $"https://t.me/{ChannelUsername}/{message.ID}"
                     });
                     added++;
                 }
@@ -115,7 +76,7 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
                 offsetId = lastId;
                 var oldestPost = history.Messages.OfType<Message>().LastOrDefault();
                 if (oldestPost is not null &&
-                    DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(AsUtc(oldestPost.date), MoscowTime)) < firstDay)
+                    DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(TelegramChannelSession.AsUtc(oldestPost.date), MoscowTime)) < firstDay)
                     break;
             }
 
@@ -123,7 +84,7 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
             Console.WriteLine($"Scanned {scanned} posts; matched {matched}; added {added}. Existing entries were preserved.");
             Console.WriteLine($"Static feed: {paths.TelegramPosts}");
             if (added > 0) Console.WriteLine("Чтобы записи появились на опубликованном сайте, отправьте content/telegram/posts.json в main.");
-            else Console.WriteLine("Новых записей нет. Проверьте период и наличие ссылок на pianikova.com в постах.");
+            else Console.WriteLine("Новых записей нет. Проверьте период; существующие ID повторно не добавляются.");
             return 0;
         }
         catch (OperationCanceledException)
@@ -133,10 +94,7 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
         }
         catch (Exception exception)
         {
-            var message = exception.Message;
-            if (!string.IsNullOrEmpty(apiHash)) message = message.Replace(apiHash, "[redacted]", StringComparison.Ordinal);
-            if (!string.IsNullOrEmpty(phone)) message = message.Replace(phone, "[redacted]", StringComparison.Ordinal);
-            Console.Error.WriteLine($"Telegram history import failed: {message}");
+            Console.Error.WriteLine($"Telegram history import failed: {session.Redact(exception.Message)}");
             return 1;
         }
     }
@@ -194,20 +152,17 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
                 if (localDay < firstDay || localDay > lastDay) continue;
 
                 var text = ExportText(message);
-                var siteUrl = FindSiteUrl(text, ExportLinks(message));
-                if (siteUrl is null) continue;
                 matched++;
                 if (!ids.Add(postId)) continue;
 
                 var normalizedText = Whitespace().Replace(text, " ").Trim();
-                if (normalizedText.Length == 0) normalizedText = siteUrl;
+                if (normalizedText.Length == 0) normalizedText = "Telegram";
                 existing["posts"]!.AsArray().Add(new JsonObject
                 {
                     ["id"] = postId,
                     ["date"] = date.ToString("O", CultureInfo.InvariantCulture),
                     ["text"] = normalizedText,
-                    ["url"] = $"https://t.me/{ChannelUsername}/{postId}",
-                    ["siteUrl"] = siteUrl
+                    ["url"] = $"https://t.me/{ChannelUsername}/{postId}"
                 });
                 added++;
             }
@@ -216,7 +171,7 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
             Console.WriteLine($"Scanned {scanned} posts; matched {matched}; added {added}. Existing entries were preserved.");
             Console.WriteLine($"Static feed: {paths.TelegramPosts}");
             if (added > 0) Console.WriteLine("Чтобы записи появились на опубликованном сайте, отправьте content/telegram/posts.json в main.");
-            else Console.WriteLine("Новых записей нет. Проверьте период и наличие ссылок на pianikova.com в постах.");
+            else Console.WriteLine("Новых записей нет. Проверьте период; существующие ID повторно не добавляются.");
             return 0;
         }
         catch (OperationCanceledException)
@@ -246,31 +201,6 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
         return result.ToString();
     }
 
-    private static IEnumerable<string> ExportLinks(JsonElement message)
-    {
-        foreach (var propertyName in new[] { "text", "text_entities" })
-        {
-            if (!message.TryGetProperty(propertyName, out var parts) || parts.ValueKind != JsonValueKind.Array) continue;
-            foreach (var part in parts.EnumerateArray())
-                if (part.ValueKind == JsonValueKind.Object && part.TryGetProperty("href", out var href) && href.ValueKind == JsonValueKind.String)
-                    yield return href.GetString()!;
-        }
-
-        if (!message.TryGetProperty("inline_bot_buttons", out var rows) || rows.ValueKind != JsonValueKind.Array) yield break;
-        foreach (var row in rows.EnumerateArray())
-        {
-            if (row.ValueKind != JsonValueKind.Array) continue;
-            foreach (var button in row.EnumerateArray())
-            {
-                if (button.ValueKind != JsonValueKind.Object ||
-                    !button.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String ||
-                    type.GetString() is not ("url" or "auth" or "web_view" or "simple_web_view") ||
-                    !button.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.String) continue;
-                yield return data.GetString()!;
-            }
-        }
-    }
-
     private static void PrintInstructions()
     {
         Console.WriteLine();
@@ -282,7 +212,7 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
         Console.WriteLine("3. Введите ниже период по Москве, api_id, api_hash и тот же номер телефона.");
         Console.WriteLine("   Если потребуется код входа или пароль двухэтапной проверки, введите его здесь.");
         Console.WriteLine("   Токен бота не нужен. Не публикуйте api_hash, коды и пароль.");
-        Console.WriteLine("В JSON попадут только посты выбранного периода со ссылкой на pianikova.com.");
+        Console.WriteLine("В JSON попадут все посты выбранного периода.");
         Console.WriteLine();
     }
 
@@ -315,59 +245,6 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
         }
     }
 
-    private static string? FindSiteUrl(Message message)
-    {
-        var candidates = new List<string>();
-        var text = message.message ?? string.Empty;
-        if (message.entities is not null)
-            candidates.AddRange(message.entities.OfType<MessageEntityTextUrl>().Select(entity => entity.url));
-        if (message.media is MessageMediaWebPage { webpage: WebPage page })
-            candidates.Add(page.url);
-        if (message.reply_markup is ReplyInlineMarkup markup)
-        {
-            candidates.AddRange(markup.rows.SelectMany(row => row.buttons).OfType<KeyboardButtonUrl>().Select(button => button.url));
-            candidates.AddRange(markup.rows.SelectMany(row => row.buttons).OfType<KeyboardButtonUrlAuth>().Select(button => button.url));
-        }
-        return FindSiteUrl(text, candidates);
-    }
-
-    private static string? FindSiteUrl(string text, IEnumerable<string> linkedUrls)
-    {
-        var candidates = new List<string>();
-        var fullUrls = FullUrl().Matches(text);
-        candidates.AddRange(fullUrls.Select(match => match.Value));
-        foreach (Match match in BareSite().Matches(text))
-        {
-            var site = match.Groups["site"];
-            if (fullUrls.Any(url => site.Index >= url.Index && site.Index < url.Index + url.Length)) continue;
-            candidates.Add(site.Value);
-        }
-        candidates.AddRange(linkedUrls);
-        return candidates.Select(NormalizeSiteUrl).FirstOrDefault(url => url is not null);
-    }
-
-    private static string? NormalizeSiteUrl(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        var candidate = raw.Trim().TrimEnd('.', ',', '!', '?', ';', ':', ')', '}', ']');
-        if (!candidate.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-            !candidate.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            candidate = "https://" + candidate;
-        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var url) ||
-            url.Scheme is not ("http" or "https") ||
-            url.UserInfo.Length > 0 || !url.IsDefaultPort ||
-            !(url.Host.Equals("pianikova.com", StringComparison.OrdinalIgnoreCase) ||
-              url.Host.Equals("www.pianikova.com", StringComparison.OrdinalIgnoreCase))) return null;
-        return url.AbsoluteUri;
-    }
-
-    private static DateTime AsUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Utc => value,
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-    };
-
     private static DateOnly ReadDate(string prompt)
     {
         Console.Write(prompt);
@@ -382,31 +259,6 @@ internal sealed partial class TelegramHistoryTarget(BuildPaths paths)
         Console.Write(prompt);
         return Console.ReadLine()?.Trim();
     }
-
-    private static string ReadSecret(string prompt)
-    {
-        Console.Write(prompt);
-        var value = new StringBuilder();
-        while (true)
-        {
-            var key = Console.ReadKey(intercept: true);
-            if (key.Key == ConsoleKey.Enter) { Console.WriteLine(); return value.ToString(); }
-            if (key.Key == ConsoleKey.Backspace) { if (value.Length > 0) value.Length--; continue; }
-            if (!char.IsControl(key.KeyChar)) value.Append(key.KeyChar);
-        }
-    }
-
-    private static TimeZoneInfo GetMoscowTimeZone()
-    {
-        try { return TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"); }
-        catch (TimeZoneNotFoundException) { return TimeZoneInfo.FindSystemTimeZoneById("Russian Standard Time"); }
-    }
-
-    [GeneratedRegex(@"(?:https?://|www\.)[^\s<>""']*", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-    private static partial Regex FullUrl();
-
-    [GeneratedRegex(@"(?:^|[\s(«„“])(?<site>pianikova\.com(?![\p{L}\p{N}_.:@-])(?:[/?#][^\s<>""']*)?)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-    private static partial Regex BareSite();
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex Whitespace();

@@ -60,7 +60,25 @@ try {
     Write-Output "webhook_configured=$([bool]$webhook.url) webhook_matches_worker=$($webhook.url -eq $ExpectedWebhookUrl)"
     Write-Output "allowed_updates=$($webhook.allowed_updates -join ',') pending_updates=$($webhook.pending_update_count)"
     if ($webhook.last_error_message) {
+        $lastErrorAt = if ($webhook.last_error_date) {
+            [DateTimeOffset]::FromUnixTimeSeconds([long]$webhook.last_error_date).ToString('u')
+        } else { 'unknown' }
+        Write-Output "webhook_last_error_at=$lastErrorAt"
         Write-Output "webhook_last_error=$($webhook.last_error_message.Replace($botToken, '[redacted]'))"
+    }
+    if ($webhook.last_synchronization_error_date) {
+        $syncErrorAt = [DateTimeOffset]::FromUnixTimeSeconds([long]$webhook.last_synchronization_error_date).ToString('u')
+        Write-Output "webhook_last_synchronization_error_at=$syncErrorAt"
+    }
+
+    try {
+        $administrators = (Invoke-BotMethod -Method 'getChatAdministrators' -Body @{ chat_id = $chat.id }).result
+        $botAdministrator = $administrators | Where-Object { [string]$_.user.id -eq [string]$me.id } | Select-Object -First 1
+        $adminStatus = if ($botAdministrator) { $botAdministrator.status } else { 'not_listed' }
+        Write-Output "bot_admin_status=$adminStatus"
+    }
+    catch {
+        Write-Output "administrator_check_error=$($_.Exception.Message)"
     }
 
     try {
