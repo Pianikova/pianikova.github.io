@@ -72,6 +72,34 @@
   "press": {
     "quotes": [
       {
+        "text": "**Yaroslavl Symphony Orchestra presents “Musical Universe” in Moscow**\n\nThe Waltz-Scherzo for violin and orchestra is a sparkling blend of festive dance rhythms, playfulness and virtuoso brilliance…",
+        "publication": "Yaroslavl Academic Governor’s Symphony Orchestra",
+        "author": "",
+        "publishedAt": "2026-11-16",
+        "sourceUrl": "https://yaagso.ru/news/yaroslavskij-simfonicheskij-orkestr-predstavil-proekt-muzykalnaya-vselennaya-v-moskve/"
+      },
+      {
+        "text": "**“Musical Universe” international music project**\n\nSoloists, both international competition laureates:  \nJulia Pianikova (violin, Russia)  \nTomona Miyazaki (piano, Japan)",
+        "publication": "Yaroslavl State Philharmonic",
+        "author": "",
+        "publishedAt": "2026-11-16",
+        "sourceUrl": "https://www.yar-filarmoniya.ru/afisha/view.php?af_id=6464"
+      },
+      {
+        "text": "**Closing concert of the 13th International Kogan-Fest**\n\nSoloists: […] international competition laureates […] Julia Pianikova (violin, Moscow) […]",
+        "publication": "Millennium Concert and Entertainment Centre",
+        "author": "",
+        "publishedAt": "2026-11-15",
+        "sourceUrl": "https://xn--g1afr0a5b.xn--p1ai/afisha/zakrytie-xiii-mezhdunarodnogo-muzykalnogo-kogan-festivalya/"
+      },
+      {
+        "text": "**“Tchaikovsky” concert**\n\nSoloists and international competition laureates: Julia Pianikova (violin, Russia) […] Programme: […] Sentimental Waltz for violin and orchestra […]",
+        "publication": "Yaroslavl State Philharmonic",
+        "author": "",
+        "publishedAt": "2026-11-14",
+        "sourceUrl": "https://www.yar-filarmoniya.ru/afisha/view.php?af_id=6260"
+      },
+      {
         "text": "St Petersburg violinist Julia Pianikova made Alice the Fox and Basilio the Cat her heroes — in Igor Rogalyov’s apt words, “the violin was literally meowing in her hands”.",
         "publication": "Sirius Educational Centre",
         "author": "",
@@ -142,10 +170,6 @@
     "pressKitPath": "",
     "photosPath": "",
     "mentions": [
-      { "date": "2026-11-16", "publication": "Yaroslavl Academic Governor’s Symphony Orchestra", "title": "Yaroslavl Symphony Orchestra presents “Musical Universe” in Moscow", "url": "https://yaagso.ru/news/yaroslavskij-simfonicheskij-orkestr-predstavil-proekt-muzykalnaya-vselennaya-v-moskve/" },
-      { "date": "2026-11-16", "publication": "Yaroslavl State Philharmonic", "title": "“Musical Universe” international music project", "url": "https://www.yar-filarmoniya.ru/afisha/view.php?af_id=6464" },
-      { "date": "2026-11-15", "publication": "Millennium Concert and Entertainment Centre", "title": "Closing concert of the 13th International Kogan-Fest", "url": "https://xn--g1afr0a5b.xn--p1ai/afisha/zakrytie-xiii-mezhdunarodnogo-muzykalnogo-kogan-festivalya/" },
-      { "date": "2026-11-14", "publication": "Yaroslavl State Philharmonic", "title": "“Tchaikovsky” concert", "url": "https://www.yar-filarmoniya.ru/afisha/view.php?af_id=6260" },
       { "date": "2026-11-14", "publication": "Culture of Yaroslavl Region", "title": "“Tchaikovsky” concert at the Yaroslavl Philharmonic", "url": "https://culture76.ru/afisha/koncerty/11176722/" },
       { "date": "2026-09-09", "publication": "Marina Tsvetaeva House Museum", "title": "“Scholarship Holders” festival: Julia Pianikova and Lyudmila Daraseliya", "url": "https://dommuseum.ru/kalendar-sobyitij/2026/sentyabr/festival-stipendiatyi-raznyix-let-yuliya-pyanikova-i-lyudmila-daraseliya" },
       { "date": "2026-03-05", "publication": "Moscow Conservatory", "title": "Selected pages of Russian chamber music", "url": "https://www.mosconsv.ru/ru/concert/200854" },

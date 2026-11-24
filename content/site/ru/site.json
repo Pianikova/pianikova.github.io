@@ -72,6 +72,34 @@
   "press": {
     "quotes": [
       {
+        "text": "**Ярославский симфонический оркестр представил проект «Музыкальная вселенная» в Москве**\n\n«Вальс-скерцо» для скрипки с оркестром — искромётное сочетание праздничной танцевальности, игривости и виртуозного блеска…",
+        "publication": "Ярославский академический губернаторский симфонический оркестр",
+        "author": "",
+        "publishedAt": "2026-11-16",
+        "sourceUrl": "https://yaagso.ru/news/yaroslavskij-simfonicheskij-orkestr-predstavil-proekt-muzykalnaya-vselennaya-v-moskve/"
+      },
+      {
+        "text": "**Международный музыкальный проект «Музыкальная вселенная»**\n\nСолисты:  \nлауреаты международных конкурсов  \nЮлия Пьяникова (скрипка, Россия)  \nТомона Миядзаки (фортепиано, Япония)",
+        "publication": "Ярославская государственная филармония",
+        "author": "",
+        "publishedAt": "2026-11-16",
+        "sourceUrl": "https://www.yar-filarmoniya.ru/afisha/view.php?af_id=6464"
+      },
+      {
+        "text": "**Закрытие XIII Международного музыкального «Коган-фестиваля»**\n\nСолисты: […] лауреаты международных конкурсов […] Юлия Пьяникова (скрипка, Москва) […]",
+        "publication": "КЗЦ «Миллениум»",
+        "author": "",
+        "publishedAt": "2026-11-15",
+        "sourceUrl": "https://xn--g1afr0a5b.xn--p1ai/afisha/zakrytie-xiii-mezhdunarodnogo-muzykalnogo-kogan-festivalya/"
+      },
+      {
+        "text": "**Концерт «Чайковский»**\n\nСолисты: лауреаты международных конкурсов Юлия Пьяникова (скрипка, Россия) […] В программе: […] Сентиментальный вальс для скрипки с оркестром […]",
+        "publication": "Ярославская государственная филармония",
+        "author": "",
+        "publishedAt": "2026-11-14",
+        "sourceUrl": "https://www.yar-filarmoniya.ru/afisha/view.php?af_id=6260"
+      },
+      {
         "text": "Петербургская скрипачка Юлия Пьяникова сделала своими героями Лису Алису и Кота Базилио, и, по меткому высказыванию Игоря Рогалёва, «скрипка буквально мяукала в её руках».",
         "publication": "Образовательный центр «Сириус»",
         "author": "",
@@ -142,10 +170,6 @@
     "pressKitPath": "",
     "photosPath": "",
     "mentions": [
-      { "date": "2026-11-16", "publication": "Ярославский академический губернаторский симфонический оркестр", "title": "Ярославский симфонический оркестр представил проект «Музыкальная вселенная» в Москве", "url": "https://yaagso.ru/news/yaroslavskij-simfonicheskij-orkestr-predstavil-proekt-muzykalnaya-vselennaya-v-moskve/" },
-      { "date": "2026-11-16", "publication": "Ярославская государственная филармония", "title": "Международный музыкальный проект «Музыкальная вселенная»", "url": "https://www.yar-filarmoniya.ru/afisha/view.php?af_id=6464" },
-      { "date": "2026-11-15", "publication": "КЗЦ «Миллениум»", "title": "Закрытие XIII Международного музыкального «Коган-фестиваля»", "url": "https://xn--g1afr0a5b.xn--p1ai/afisha/zakrytie-xiii-mezhdunarodnogo-muzykalnogo-kogan-festivalya/" },
-      { "date": "2026-11-14", "publication": "Ярославская государственная филармония", "title": "Концерт «Чайковский»", "url": "https://www.yar-filarmoniya.ru/afisha/view.php?af_id=6260" },
       { "date": "2026-11-14", "publication": "Культура Ярославии", "title": "Концерт «Чайковский» в Ярославской филармонии", "url": "https://culture76.ru/afisha/koncerty/11176722/" },
       { "date": "2026-09-09", "publication": "Дом-музей Марины Цветаевой", "title": "Фестиваль «Стипендиаты разных лет»: Юлия Пьяникова и Людмила Дараселия", "url": "https://dommuseum.ru/kalendar-sobyitij/2026/sentyabr/festival-stipendiatyi-raznyix-let-yuliya-pyanikova-i-lyudmila-daraseliya" },
       { "date": "2026-03-05", "publication": "Московская консерватория", "title": "Избранные страницы русской камерной музыки", "url": "https://www.mosconsv.ru/ru/concert/200854" },
