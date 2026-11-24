@@ -5,7 +5,7 @@ date: "2026-10-29T18:21:36+03:00"
 title: null
 source: "https://t.me/gattavasis/738"
 tags: []
-reactions: 7
+reactions: 8
 rubric: ""
 series: ""
 hidden: false

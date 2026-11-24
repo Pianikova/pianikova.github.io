@@ -5,7 +5,7 @@ date: "2026-10-31T14:32:41+03:00"
 title: "Александрия"
 source: "https://t.me/gattavasis/739"
 tags: []
-reactions: 47
+reactions: 49
 rubric: ""
 series: ""
 hidden: false
